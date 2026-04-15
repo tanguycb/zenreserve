@@ -1,0 +1,338 @@
+// Version: 1.0.0
+type AISeatingSuggestion__717321920 =
+  {
+    confidence : Float;
+    createdAt : Int;
+    date : Text;
+    partySize : Nat;
+    reasoning : Text;
+    suggestedTableIds : [Text];
+    suggestionId : Text;
+    zonePreference : ?Text
+  };
+type BrandingSettings__406196753 =
+  {
+    accentColor : Text;
+    confirmationText : Text;
+    defaultLanguage : Text;
+    logoUrl : ?Text;
+    primaryColor : Text;
+    welcomeText : Text
+  };
+type ClosingDay__843406407 = {date : Text; reason : Text; serviceId : ?Text};
+type CustomQuestion__282271811 =
+  {
+    id : Text;
+    labelText : Text;
+    options : [Text];
+    questionType : {#dropdown; #text};
+    required : Bool
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type DayOfWeek__249784526 = Nat;
+type ExperienceId__76814950 = Text;
+type Experience__407200578 =
+  {
+    description : Text;
+    id : ExperienceId__76814950;
+    isActive : Bool;
+    maxCapacity : Nat;
+    name : Text;
+    pricePerPerson : Nat
+  };
+type GuestFormSettings__142853507 =
+  {
+    customQuestions : [CustomQuestion__282271811];
+    requireAllergies : Bool;
+    requireDietPreferences : Bool;
+    requirePhone : Bool
+  };
+type GuestId__80888198 = Text;
+type Guest__1013009172 =
+  {
+    createdAt : Timestamp__301639476;
+    email : Text;
+    id : GuestId__80888198;
+    name : Text;
+    phone : ?Text;
+    reservationIds : [ReservationId__879094814];
+    tags : [Text]
+  };
+type IntegrationSettings__540879812 =
+  {
+    apiKey : Text;
+    calendarSyncEnabled : Bool;
+    mollieEnabled : Bool;
+    posSystem : ?Text;
+    stripeEnabled : Bool;
+    stripePublicKey : Text
+  };
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type NotificationSettings__1023783760 =
+  {
+    reminderHoursBefore : [Nat];
+    sendCancellationEmail : Bool;
+    sendConfirmationEmail : Bool;
+    sendReminderEmail : Bool;
+    waitlistAutoActivate : Bool
+  };
+type OccupancySettings__1007537574 =
+  {
+    globalCeilingPercent : Nat;
+    maxGuestsPerReservationMax : Nat;
+    maxGuestsPerReservationMin : Nat
+  };
+type ReservationId__879094814 = Text;
+type ReservationRules__627802212 =
+  {
+    advanceBookingDays : Nat;
+    cancellationHoursBeforeFree : Nat;
+    depositAmountEur : Nat;
+    depositRequired : Bool;
+    depositRequiredAbovePartySize : Nat;
+    maxPartySize : Nat;
+    maxStayMinutesDinner : Nat;
+    maxStayMinutesLunch : Nat;
+    minPartySize : Nat;
+    noShowFeeEur : Nat
+  };
+type ReservationStatus__703841619 =
+  {
+    #cancelled;
+    #confirmed;
+    #departed;
+    #late;
+    #not_arrived;
+    #seated;
+    #waitlist
+  };
+type Reservation__791493290 =
+  {
+    createdAt : Timestamp__301639476;
+    date : Text;
+    experienceId : ?ExperienceId__76814950;
+    guestId : GuestId__80888198;
+    id : ReservationId__879094814;
+    partySize : Nat;
+    specialRequests : ?Text;
+    status : ReservationStatus__703841619;
+    stripePaymentIntentId : ?Text;
+    time : Text
+  };
+type RestaurantExtendedConfig__9983377 =
+  {
+    branding : BrandingSettings__406196753;
+    closingHour : Nat;
+    contactEmail : Text;
+    contactPhone : Text;
+    currency : Text;
+    exceptionalClosingDays : [ClosingDay__843406407];
+    fixedClosingDays : [DayOfWeek__249784526];
+    guestForm : GuestFormSettings__142853507;
+    integrations : IntegrationSettings__540879812;
+    logoUrl : ?Text;
+    notifications : NotificationSettings__1023783760;
+    occupancySettings : ?OccupancySettings__1007537574;
+    openingHour : Nat;
+    reservationRules : ReservationRules__627802212;
+    restaurantName : Text;
+    services : [ServiceHours__552418936];
+    slotIntervalMinutes : Nat;
+    tableTypes : [TableType__60054991];
+    timezone : Text;
+    totalSeatsPerSlot : Nat;
+    zones : [ZoneCapacity__120328896]
+  };
+type SeasonalPeriod__708339519 =
+  {
+    activatedZones : [Text];
+    autoActivate : Bool;
+    capacityOverride : ?Nat;
+    dateFrom : Text;
+    dateTo : Text;
+    id : Text;
+    isActive : Bool;
+    name : Text
+  };
+type ServiceHours__552418936 =
+  {
+    closeTime : Text;
+    enabledDays : [DayOfWeek__249784526];
+    id : Text;
+    maxCapacity : Nat;
+    name : Text;
+    openTime : Text
+  };
+type SuggestionFeedback__1052244024 =
+  {
+    accepted : Bool;
+    recordedAt : Int;
+    rejectionReason : ?Text;
+    suggestionId : Text
+  };
+type TableId__109544317 = Text;
+type TableStatus__235044297 = {#empty; #occupied; #reserved; #unavailable};
+type TableType__60054991 = {capacity : Nat; count : Nat; typeName : Text};
+type TableWeight__1069473004 =
+  {acceptCount : Nat; rejectCount : Nat; tableId : Text; zoneId : Text};
+type Table__1039298634 =
+  {
+    capacity : Nat;
+    groupId : ?Text;
+    guestName : ?Text;
+    id : TableId__109544317;
+    name : Text;
+    reservationId : ?ReservationId__879094814;
+    seatCount : ?Nat;
+    status : TableStatus__235044297;
+    x : Int;
+    y : Int
+  };
+type TeamMember__16370082 =
+  {
+    createdAt : Int;
+    email : Text;
+    id : Text;
+    name : Text;
+    principalId : Text;
+    role : Text
+  };
+type Timestamp__301639476 = Int;
+type UserRole__1054455867 = {#admin; #guest; #user};
+type WaitlistEntry__155364746 =
+  {
+    date : Text;
+    guestId : GuestId__80888198;
+    id : WaitlistId__11847903;
+    joinedAt : Timestamp__301639476;
+    notes : ?Text;
+    notifiedAt : ?Timestamp__301639476;
+    partySize : Nat;
+    requestedTime : ?Text;
+    status : WaitlistStatus__247298350
+  };
+type WaitlistId__11847903 = Text;
+type WaitlistStatus__247298350 = {#confirmed; #expired; #offered; #waiting};
+type ZoneCapacity__120328896 = {maxGuests : Nat; zoneName : Text};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable experienceCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable experiences :
+    {
+      var root : Node__46230540<ExperienceId__76814950, Experience__407200578>;
+      var size : Nat__490723111
+    };
+  stable extendedConfig :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?RestaurantExtendedConfig__9983377]];
+      var elementIndex : Nat__490723111
+    };
+  stable guestCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable guests :
+    {
+      var root : Node__46230540<GuestId__80888198, Guest__1013009172>;
+      var size : Nat__490723111
+    };
+  stable reservationCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable reservations :
+    {
+      var root :
+        Node__46230540<ReservationId__879094814, Reservation__791493290>;
+      var size : Nat__490723111
+    };
+  stable restaurantConfig :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks :
+        [var [var ?{
+                     closingHour : Nat;
+                     openingHour : Nat;
+                     restaurantName : Text;
+                     slotIntervalMinutes : Nat;
+                     totalSeatsPerSlot : Nat
+                   }]];
+      var elementIndex : Nat__490723111
+    };
+  stable seasonalPeriods :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?SeasonalPeriod__708339519]];
+      var elementIndex : Nat__490723111
+    };
+  stable suggestionFeedback :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?SuggestionFeedback__1052244024]];
+      var elementIndex : Nat__490723111
+    };
+  stable suggestionHistory :
+    {
+      var root : Node__46230540<Text, AISeatingSuggestion__717321920>;
+      var size : Nat__490723111
+    };
+  stable tableCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableWeights :
+    {
+      var root : Node__46230540<Text, TableWeight__1069473004>;
+      var size : Nat__490723111
+    };
+  stable tables :
+    {
+      var root : Node__46230540<TableId__109544317, Table__1039298634>;
+      var size : Nat__490723111
+    };
+  stable teamStore :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?TeamMember__16370082]];
+      var elementIndex : Nat__490723111
+    };
+  stable waitlist :
+    {
+      var root :
+        Node__46230540<WaitlistId__11847903, WaitlistEntry__155364746>;
+      var size : Nat__490723111
+    };
+  stable waitlistCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    }
+};

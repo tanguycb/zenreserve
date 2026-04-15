@@ -1,0 +1,514 @@
+type ZoneCapacity = 
+ record {
+   maxGuests: nat;
+   zoneName: text;
+ };
+type WaitlistStatus = 
+ variant {
+   confirmed;
+   expired;
+   offered;
+   waiting;
+ };
+type WaitlistId = text;
+type WaitlistEntry = 
+ record {
+   date: text;
+   guestId: GuestId;
+   id: WaitlistId;
+   joinedAt: Timestamp;
+   notes: opt text;
+   notifiedAt: opt Timestamp;
+   partySize: nat;
+   requestedTime: opt text;
+   status: WaitlistStatus;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type Timestamp = int;
+type TimeSlotStatus = 
+ variant {
+   available;
+   full;
+   limited;
+ };
+type TimeSlot = 
+ record {
+   availableSeats: nat;
+   status: TimeSlotStatus;
+   time: text;
+   totalSeats: nat;
+ };
+type TeamMember = 
+ record {
+   createdAt: int;
+   email: text;
+   id: text;
+   name: text;
+   principalId: text;
+   role: text;
+ };
+type TableType = 
+ record {
+   capacity: nat;
+   count: nat;
+   typeName: text;
+ };
+type TableStatus = 
+ variant {
+   "empty";
+   occupied;
+   "reserved";
+   unavailable;
+ };
+type TableId = text;
+type TableAssignment = 
+ record {
+   assignedAt: Timestamp;
+   guestName: text;
+   reservationId: ReservationId;
+   seatCount: nat;
+   tableId: TableId;
+ };
+type Table = 
+ record {
+   capacity: nat;
+   groupId: opt text;
+   guestName: opt text;
+   id: TableId;
+   name: text;
+   reservationId: opt ReservationId;
+   seatCount: opt nat;
+   status: TableStatus;
+   x: int;
+   y: int;
+ };
+type SuggestionAccuracyStats = 
+ record {
+   acceptanceRatePct: float64;
+   acceptedCount: nat;
+   periodDays: nat;
+   rejectedCount: nat;
+   totalSuggestions: nat;
+ };
+type ServiceHours = 
+ record {
+   closeTime: text;
+   enabledDays: vec DayOfWeek;
+   id: text;
+   maxCapacity: nat;
+   name: text;
+   openTime: text;
+ };
+type SeasonalPeriod = 
+ record {
+   activatedZones: vec text;
+   autoActivate: bool;
+   capacityOverride: opt nat;
+   dateFrom: text;
+   dateTo: text;
+   id: text;
+   isActive: bool;
+   name: text;
+ };
+type RestaurantExtendedConfig = 
+ record {
+   branding: BrandingSettings;
+   closingHour: nat;
+   contactEmail: text;
+   contactPhone: text;
+   currency: text;
+   exceptionalClosingDays: vec ClosingDay;
+   fixedClosingDays: vec DayOfWeek;
+   guestForm: GuestFormSettings;
+   integrations: IntegrationSettings;
+   logoUrl: opt text;
+   notifications: NotificationSettings;
+   occupancySettings: opt OccupancySettings;
+   openingHour: nat;
+   reservationRules: ReservationRules;
+   restaurantName: text;
+   services: vec ServiceHours;
+   slotIntervalMinutes: nat;
+   tableTypes: vec TableType;
+   timezone: text;
+   totalSeatsPerSlot: nat;
+   zones: vec ZoneCapacity;
+ };
+type ReservationSummary = 
+ record {
+   date: text;
+   partySize: nat;
+   tableId: text;
+   time: text;
+ };
+type ReservationStatus = 
+ variant {
+   cancelled;
+   confirmed;
+   departed;
+   late;
+   not_arrived;
+   seated;
+   waitlist;
+ };
+type ReservationRules = 
+ record {
+   advanceBookingDays: nat;
+   cancellationHoursBeforeFree: nat;
+   depositAmountEur: nat;
+   depositRequired: bool;
+   depositRequiredAbovePartySize: nat;
+   maxPartySize: nat;
+   maxStayMinutesDinner: nat;
+   maxStayMinutesLunch: nat;
+   minPartySize: nat;
+   noShowFeeEur: nat;
+ };
+type ReservationId = text;
+type ReservationFilter = 
+ record {
+   date: opt text;
+   guestId: opt GuestId;
+   status: opt ReservationStatus;
+ };
+type Reservation = 
+ record {
+   createdAt: Timestamp;
+   date: text;
+   experienceId: opt ExperienceId;
+   guestId: GuestId;
+   id: ReservationId;
+   partySize: nat;
+   specialRequests: opt text;
+   status: ReservationStatus;
+   stripePaymentIntentId: opt text;
+   time: text;
+ };
+type OccupancySettings = 
+ record {
+   globalCeilingPercent: nat;
+   maxGuestsPerReservationMax: nat;
+   maxGuestsPerReservationMin: nat;
+ };
+type NotificationSettings = 
+ record {
+   reminderHoursBefore: vec nat;
+   sendCancellationEmail: bool;
+   sendConfirmationEmail: bool;
+   sendReminderEmail: bool;
+   waitlistAutoActivate: bool;
+ };
+type KPIs = 
+ record {
+   avgPartySize: nat;
+   noShowCount: nat;
+   occupancyPct: nat;
+   todayCoversPerService: vec record {
+                                text;
+                                nat;
+                              };
+   todayReservationCount: nat;
+ };
+type IntegrationSettings = 
+ record {
+   apiKey: text;
+   calendarSyncEnabled: bool;
+   mollieEnabled: bool;
+   posSystem: opt text;
+   stripeEnabled: bool;
+   stripePublicKey: text;
+ };
+type GuestId = text;
+type GuestFormSettings = 
+ record {
+   customQuestions: vec CustomQuestion;
+   requireAllergies: bool;
+   requireDietPreferences: bool;
+   requirePhone: bool;
+ };
+type Guest = 
+ record {
+   createdAt: Timestamp;
+   email: text;
+   id: GuestId;
+   name: text;
+   phone: opt text;
+   reservationIds: vec ReservationId;
+   tags: vec text;
+ };
+type FloorState = 
+ record {
+   tables: vec Table;
+   updatedAt: Timestamp;
+ };
+type ExperienceId = text;
+type Experience = 
+ record {
+   description: text;
+   id: ExperienceId;
+   isActive: bool;
+   maxCapacity: nat;
+   name: text;
+   pricePerPerson: nat;
+ };
+type DayOfWeek = nat;
+type CustomQuestion = 
+ record {
+   id: text;
+   labelText: text;
+   options: vec text;
+   questionType: variant {
+                   dropdown;
+                   "text";
+                 };
+   required: bool;
+ };
+type ClosingDay = 
+ record {
+   date: text;
+   reason: text;
+   serviceId: opt text;
+ };
+type BrandingSettings = 
+ record {
+   accentColor: text;
+   confirmationText: text;
+   defaultLanguage: text;
+   logoUrl: opt text;
+   primaryColor: text;
+   welcomeText: text;
+ };
+type AISeatingSuggestion = 
+ record {
+   confidence: float64;
+   createdAt: int;
+   date: text;
+   partySize: nat;
+   reasoning: text;
+   suggestedTableIds: vec text;
+   suggestionId: text;
+   zonePreference: opt text;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  addTeamMember: (principalId: text, name: text, email: text, role: text) ->
+   (variant {
+      err: text;
+      ok: TeamMember;
+    });
+  addToWaitlist: (guestId: GuestId, date: text, partySize: nat,
+   requestedTime: opt text, notes: opt text) -> (WaitlistEntry);
+  askAI: (prompt: text, context: text) -> (variant {
+                                             err: text;
+                                             ok: text;
+                                           });
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  assignReservationToTable: (tableId: TableId, reservationId:
+   ReservationId) -> (variant {
+                        err: text;
+                        ok: TableAssignment;
+                      });
+  assignReservationToTableWithDetails: (tableId: TableId, reservationId:
+   ReservationId, guestName: text, seatCount: nat) ->
+   (variant {
+      err: text;
+      ok: TableAssignment;
+    });
+  autoAssignTable: (reservationId: ReservationId, partySize: nat) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  cancelReservation: (id: ReservationId) -> ();
+  createExperience: (name: text, description: text, pricePerPerson: nat,
+   maxCapacity: nat) -> (Experience);
+  createGuest: (name: text, email: text, phone: opt text) -> (Guest);
+  createReservation: (guestId: GuestId, date: text, time: text, partySize:
+   nat, experienceId: opt ExperienceId, stripePaymentIntentId: opt text,
+   specialRequests: opt text) -> (Reservation);
+  createReservationWithDetails: (guestName: text, phone: text, email: 
+   text, partySize: nat, date: text, timeSlot: text, tableId: opt text,
+   notes: opt text) -> (variant {
+                          err: text;
+                          ok: Reservation;
+                        });
+  createTable: (name: text, capacity: nat, x: int, y: int) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  deleteSeasonalPeriod: (id: text) -> (variant {
+                                         err: text;
+                                         ok;
+                                       });
+  deleteTable: (id: TableId) -> (variant {
+                                   err: text;
+                                   ok;
+                                 });
+  findBestTable: (partySize: nat, excludeTableIds: vec text) ->
+   (opt Table) query;
+  findBestTableForReservation: (partySize: nat) -> (opt Table) query;
+  getAISuggestions: (guestId: opt GuestId, reservationContext: text) ->
+   (variant {
+      err: text;
+      ok: vec text;
+    });
+  getActiveSeason: (date: text) -> (opt SeasonalPeriod) query;
+  getActiveZonesForDate: (date: text) -> (vec text) query;
+  getAvailableSlots: (date: text) -> (vec TimeSlot) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getExtendedConfig: () -> (RestaurantExtendedConfig) query;
+  getFloorState: () -> (FloorState) query;
+  getGuest: (id: GuestId) -> (opt Guest) query;
+  getKPIs: () -> (KPIs) query;
+  getReservation: (id: ReservationId) -> (opt Reservation) query;
+  getRestaurantConfig: () ->
+   (record {
+      closingHour: nat;
+      openingHour: nat;
+      restaurantName: text;
+      slotIntervalMinutes: nat;
+      totalSeatsPerSlot: nat;
+    }) query;
+  getSeasonalPeriods: () -> (vec SeasonalPeriod) query;
+  getSuggestionAccuracyStats: (days: nat) -> (SuggestionAccuracyStats) query;
+  getTables: () -> (vec Table) query;
+  getWaitlist: (date: text) -> (vec WaitlistEntry) query;
+  getWaitlistEntry: (id: WaitlistId) -> (opt WaitlistEntry) query;
+  groupTables: (tableIds: vec text, groupId: text) ->
+   (variant {
+      err: text;
+      ok: vec Table;
+    });
+  isCallerAdmin: () -> (bool) query;
+  listActiveExperiences: () -> (vec Experience) query;
+  listExperiences: () -> (vec Experience) query;
+  listGuests: () -> (vec Guest) query;
+  listReservations: (filter: ReservationFilter) -> (vec Reservation) query;
+  listTeamMembers: () -> (vec TeamMember) query;
+  offerWaitlistSpot: (id: WaitlistId) -> ();
+  recordSuggestionFeedback: (suggestionId: text, accepted: bool,
+   rejectionReason: opt text) -> (variant {
+                                    err: text;
+                                    ok;
+                                  });
+  removeTeamMember: (memberId: text) -> (variant {
+                                           err: text;
+                                           ok;
+                                         });
+  removeWaitlistEntry: (id: WaitlistId) -> (variant {
+                                              err: text;
+                                              ok;
+                                            });
+  reofferWaitlistSpot: (id: WaitlistId) ->
+   (variant {
+      err: text;
+      ok: WaitlistEntry;
+    });
+  saveSeasonalPeriod: (period: SeasonalPeriod) -> (variant {
+                                                     err: text;
+                                                     ok;
+                                                   });
+  searchGuests: (searchQuery: text) -> (vec Guest) query;
+  setTableStatus: (tableId: TableId, status: TableStatus) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  suggestTable: (partySize: nat, zonePreference: opt text, date: text, time:
+   text, existingReservations: vec ReservationSummary) ->
+   (variant {
+      err: text;
+      ok: AISeatingSuggestion;
+    });
+  toggleSeasonalPeriod: (id: text, active: bool) -> (variant {
+                                                       err: text;
+                                                       ok;
+                                                     });
+  unassignTable: (tableId: TableId) -> (variant {
+                                          err: text;
+                                          ok;
+                                        });
+  ungroupTables: (groupId: text) -> (variant {
+                                       err: text;
+                                       ok: vec Table;
+                                     });
+  updateBrandingSettings: (branding: BrandingSettings) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateCapacitySettings: (zones: vec ZoneCapacity, tableTypes:
+   vec TableType, occupancySettings: opt OccupancySettings,
+   totalSeatsPerSlot: nat) -> (variant {
+                                 err: text;
+                                 ok;
+                               });
+  updateExceptionalClosingDays: (fixedClosingDays: vec DayOfWeek,
+   exceptionalClosingDays: vec ClosingDay) -> (variant {
+                                                 err: text;
+                                                 ok;
+                                               });
+  updateExperience: (experience: Experience) -> ();
+  updateGeneralInfo: (restaurantName: text, currency: text, timezone: 
+   text, contactPhone: text, contactEmail: text, logoUrl: opt text) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateGuestFormSettings: (guestForm: GuestFormSettings) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateGuestTags: (id: GuestId, tags: vec text) -> ();
+  updateIntegrationSettings: (integrations: IntegrationSettings) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateNotificationSettings: (notifications: NotificationSettings) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateReservation: (id: ReservationId, date: text, time: text, partySize:
+   nat, specialRequests: opt text) -> (variant {
+                                         err: text;
+                                         ok: Reservation;
+                                       });
+  updateReservationRules: (reservationRules: ReservationRules) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateReservationStatus: (id: ReservationId, status: ReservationStatus) ->
+   ();
+  updateRestaurantConfig: (restaurantName: text, totalSeatsPerSlot: nat,
+   openingHour: nat, closingHour: nat, slotIntervalMinutes: nat) -> ();
+  updateServiceHours: (services: vec ServiceHours) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateTablePosition: (id: TableId, x: int, y: int) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  updateTeamMemberRole: (memberId: text, newRole: text) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  updateWaitlistEntry: (id: WaitlistId, partySize: nat, notes: opt text) ->
+   (variant {
+      err: text;
+      ok: WaitlistEntry;
+    });
+}

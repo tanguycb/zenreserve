@@ -1,0 +1,143 @@
+{
+  "steps": {
+    "dateTime": "Date & Time",
+    "partySize": "Party Size",
+    "experiences": "Experiences",
+    "details": "Your Details",
+    "confirmation": "Confirmation"
+  },
+  "dateStep": {
+    "title": "Choose a date",
+    "subtitle": "Select an available date for your reservation",
+    "loading": "Loading dates...",
+    "available": "Available",
+    "fullyBooked": "Fully booked",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "weekdays": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ]
+  },
+  "timeStep": {
+    "title": "Choose a time slot",
+    "loading": "Loading time slots...",
+    "available": "Available",
+    "limited": "Limited",
+    "full": "Full",
+    "premium": "Premium",
+    "allFull": "Fully booked",
+    "allFullSub": "All time slots on this date are taken.",
+    "waitlistCta": "Join the waitlist",
+    "places": "pl.",
+    "slots": "Available time slots"
+  },
+  "partySizeStep": {
+    "title": "Number of guests",
+    "person": "person",
+    "persons": "persons",
+    "decreaseLabel": "Fewer guests",
+    "increaseLabel": "More guests",
+    "quickSelect": "Quick-select guest count",
+    "babies": "Babies / children < 3 years",
+    "babiesSub": "Free — high chairs available",
+    "largeGroup": "For groups > 8 people we will contact you."
+  },
+  "experienceStep": {
+    "title": "Add an experience",
+    "optional": "(optional)",
+    "loading": "Loading experiences...",
+    "noPreference": "No preference",
+    "noPreferenceSub": "Just a wonderful evening à la carte",
+    "perPerson": "p.p.",
+    "skip": "No experience",
+    "tagMenu": "Menu",
+    "tagEvent": "Event",
+    "tagSpecial": "Special"
+  },
+  "detailsStep": {
+    "title": "Your details",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email address",
+    "phone": "Phone number",
+    "notes": "Special notes",
+    "notesPlaceholder": "Allergies, special occasions, high chair needed...",
+    "emailPlaceholder": "name@example.com",
+    "phonePlaceholder": "+32 xxx xx xx xx",
+    "specialRequests": "Special requests (optional)",
+    "termsLabel": "I agree to the terms and conditions",
+    "birthday": "Birthday / Anniversary",
+    "birthdaySub": "We'll make it special!",
+    "birthdayDate": "Date (optional)",
+    "required": "Required fields",
+    "errors": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "emailRequired": "Email address is required",
+      "emailInvalid": "Please enter a valid email address"
+    }
+  },
+  "paymentStep": {
+    "title": "Payment",
+    "deposit": "Deposit for your reservation",
+    "depositNote": "person",
+    "total": "Total",
+    "payButton": "Pay {{amount}} securely",
+    "processing": "Processing...",
+    "cardName": "Name on card",
+    "cardNumber": "Card number",
+    "expiry": "Expiry date",
+    "cvc": "CVC",
+    "successTitle": "Payment successful!",
+    "successSub": "Deposit of {{amount}} processed.",
+    "errorDefault": "Payment failed. Please check your card details and try again.",
+    "secureNote": "256-bit SSL · Powered by Stripe · PCI-DSS compliant"
+  },
+  "confirmationStep": {
+    "title": "Reservation confirmed!",
+    "subtitle": "Thank you, {{name}}! We look forward to seeing you.",
+    "bookingRef": "Booking reference",
+    "date": "Date",
+    "time": "Time",
+    "persons": "Persons",
+    "person": "person",
+    "personsPlural": "persons",
+    "experience": "Experience",
+    "emailConfirm": "Confirmation to",
+    "confirmationSent": "A confirmation email has been sent to {{email}}",
+    "addToCalendar": "Calendar",
+    "newBooking": "New reservation",
+    "guests": "Guests"
+  },
+  "waitlist": {
+    "title": "Fully booked",
+    "subtitle": "All times are taken. Join the waitlist?",
+    "joinButton": "Waitlist"
+  },
+  "cta": {
+    "bookNow": "Book now",
+    "checkAvailability": "Check availability"
+  },
+  "stepIndicator": {
+    "progressLabel": "Step {{current}} of {{total}}"
+  },
+  "skipLink": "Skip to reservation",
+  "nav": {
+    "back": "Back",
+    "next": "Next",
+    "toPayment": "To payment",
+    "bookTable": "Make a Reservation"
+  }
+}

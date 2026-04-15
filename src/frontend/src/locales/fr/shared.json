@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "reservations": "Réservations",
+    "guests": "Clients",
+    "experiences": "Expériences",
+    "waitlist": "Liste d'attente",
+    "seatingPlan": "Plan de salle",
+    "analytics": "Analyses",
+    "guestApp": "Trouver un restaurant"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "loading": "Chargement...",
+    "retry": "Réessayer",
+    "logout": "Se déconnecter"
+  },
+  "status": {
+    "confirmed": "Confirmé",
+    "pending": "En attente",
+    "cancelled": "Annulé",
+    "waitlist": "Liste d'attente",
+    "seated": "Installé",
+    "completed": "Terminé",
+    "noShow": "No Show"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite",
+    "notFound": "Introuvable",
+    "unauthorized": "Accès refusé"
+  },
+  "language": {
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français",
+    "switchLabel": "Langue"
+  },
+  "branding": {
+    "builtWith": "Construit avec amour via"
+  },
+  "accessibility": {
+    "skipToContent": "Aller au contenu"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "overview": "ZenReserve is a premium restaurant reservation management platform for both guests and staff. It features a guest-facing booking widget, a full admin dashboard with table plan management, CRM, analytics, and advanced settings — all in a warm, minimalist style inspired by Zenchef.",
+  "features": [
+    "Guest reservation booking widget",
+    "Google Calendar-style reservations time-grid",
+    "Premium drag-and-drop table plan with status rings",
+    "Smart table auto-assignment with best-fit logic",
+    "5-status reservation management (arrived/seated/late/departed/cancelled)",
+    "Dashboard KPIs with Couverts today split by service",
+    "Mini occupancy widget grouped by service timeslots",
+    "AI insight callout for overbooking risk",
+    "Full waitlist management (edit/remove/offer/re-offer)",
+    "9 settings categories with dark/light mode toggle",
+    "Micro-animations and gradient design polish",
+    "Full NL/EN/FR translations"
+  ],
+  "category": "productivity",
+  "tags": [
+    "restaurant",
+    "reservations",
+    "dashboard",
+    "table-management",
+    "hospitality",
+    "pwa",
+    "multilingual"
+  ],
+  "last_updated": "2026-04-11T17:33:15.104Z"
+}

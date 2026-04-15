@@ -1,0 +1,29 @@
+{
+  "search": {
+    "title": "Find your perfect restaurant",
+    "subtitle": "Discover unique dining experiences",
+    "datePlaceholder": "Choose a date",
+    "guestsLabel": "Guests",
+    "searchButton": "Search",
+    "noResults": "No availability found",
+    "chooseDate": "Choose a date to see availability",
+    "guest": "guest",
+    "guests": "guests"
+  },
+  "restaurant": {
+    "bookNow": "Book now",
+    "viewMenu": "View menu",
+    "experiences": "Experiences",
+    "availability": "Availability",
+    "about": "About us",
+    "openingHours": "Opening hours",
+    "location": "Location"
+  },
+  "booking": {
+    "selectedDate": "Selected date",
+    "selectedTime": "Selected time",
+    "partySize": "Party size",
+    "continueBooking": "Continue booking",
+    "backToSearch": "Back to search"
+  }
+}

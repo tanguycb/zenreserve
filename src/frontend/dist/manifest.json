@@ -1,0 +1,43 @@
+{
+  "name": "ZenReserve",
+  "short_name": "ZenReserve",
+  "description": "Restaurant reserveringsplatform — widget voor gasten en dashboard voor beheer",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#22C55E",
+  "background_color": "#FAF7F0",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "productivity", "business"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nieuwe reservering",
+      "short_name": "Reservering",
+      "description": "Maak een nieuwe reservering",
+      "url": "/widget",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open het restaurantdashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

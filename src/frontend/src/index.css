@@ -1,0 +1,425 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: "DM Sans", sans-serif;
+    --font-body: "DM Sans", sans-serif;
+    --font-mono: monospace;
+    --radius: 1rem;
+
+    /* Widget light mode: warm cream background */
+    --background: 0.98 0.02 70;
+    --foreground: 0.28 0.02 273;
+    --card: 1.0 0 0;
+    --card-foreground: 0.28 0.02 273;
+    --popover: 1.0 0 0;
+    --popover-foreground: 0.28 0.02 273;
+
+    /* Primary: green #22C55E */
+    --primary: 0.7 0.19 142;
+    --primary-foreground: 1.0 0 0;
+
+    /* Secondary: blue #3B82F6 */
+    --secondary: 0.64 0.16 258;
+    --secondary-foreground: 1.0 0 0;
+    --muted: 0.95 0.01 70;
+    --muted-foreground: 0.5 0.01 70;
+
+    /* Accent: warm gold #c8a96e */
+    --accent: 0.72 0.14 70;
+    --accent-foreground: 1.0 0 0;
+
+    /* Danger: red #EF4444 */
+    --destructive: 0.6 0.21 25;
+    --destructive-foreground: 1.0 0 0;
+
+    /* Light borders */
+    --border: 0.92 0.01 70;
+    --input: 0.95 0.01 70;
+    --ring: 0.7 0.19 142;
+
+    /* Phase 4: AI & seasonal */
+    --ai-suggestion-bg: 0.96 0.04 142;
+    --seasonal-active: 0.75 0.08 70;
+
+    /* Chart colors */
+    --chart-1: 0.7 0.19 142;
+    --chart-2: 0.64 0.16 258;
+    --chart-3: 0.68 0.21 58;
+    --chart-4: 0.6 0.21 25;
+    --chart-5: 0.77 0.19 70;
+
+    /* Sidebar light */
+    --sidebar: 1.0 0 0;
+    --sidebar-foreground: 0.28 0.02 273;
+    --sidebar-primary: 0.7 0.19 142;
+    --sidebar-primary-foreground: 1.0 0 0;
+    --sidebar-accent: 0.68 0.21 58;
+    --sidebar-accent-foreground: 1.0 0 0;
+    --sidebar-border: 0.92 0.01 70;
+    --sidebar-ring: 0.7 0.19 142;
+  }
+
+  .dark {
+    /* Dashboard dark mode: navy #0F172A */
+    --background: 0.08 0 0;
+    --foreground: 0.96 0.01 257;
+    --card: 0.12 0.01 270;
+    --card-foreground: 0.96 0.01 257;
+    --popover: 0.15 0 0;
+    --popover-foreground: 0.96 0.01 257;
+
+    /* Primary: green (brightened for dark) */
+    --primary: 0.75 0.22 142;
+    --primary-foreground: 0.08 0 0;
+
+    /* Secondary: blue (brightened for dark) */
+    --secondary: 0.7 0.19 258;
+    --secondary-foreground: 0.96 0.01 257;
+    --muted: 0.2 0.01 270;
+    --muted-foreground: 0.65 0.01 257;
+
+    /* Accent: warm gold (brightened for dark) */
+    --accent: 0.78 0.18 70;
+    --accent-foreground: 0.08 0 0;
+
+    /* Danger: red (brightened for dark) */
+    --destructive: 0.65 0.24 25;
+    --destructive-foreground: 0.96 0.01 257;
+
+    /* Dark borders */
+    --border: 0.2 0.01 270;
+    --input: 0.18 0.01 270;
+    --ring: 0.75 0.22 142;
+
+    /* Phase 5: Premium polish accents */
+    --status-orange: 0.72 0.22 58;
+    --status-blue: 0.7 0.19 258;
+    --status-purple: 0.68 0.18 312;
+    --grid-subtle: 0.22 0.01 270;
+
+    /* Phase 4: AI & seasonal on dark */
+    --ai-suggestion-bg: 0.18 0.05 142;
+    --seasonal-active: 0.25 0.08 70;
+
+    /* Chart colors dark */
+    --chart-1: 0.75 0.22 142;
+    --chart-2: 0.7 0.19 258;
+    --chart-3: 0.73 0.24 58;
+    --chart-4: 0.65 0.24 25;
+    --chart-5: 0.82 0.22 70;
+
+    /* Sidebar dark */
+    --sidebar: 0.12 0.01 270;
+    --sidebar-foreground: 0.96 0.01 257;
+    --sidebar-primary: 0.75 0.22 142;
+    --sidebar-primary-foreground: 0.08 0 0;
+    --sidebar-accent: 0.73 0.24 58;
+    --sidebar-accent-foreground: 0.96 0.01 257;
+    --sidebar-border: 0.2 0.01 270;
+    --sidebar-ring: 0.75 0.22 142;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/assets/fonts/DMSans.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 400 700;
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .shadow-canvas {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-drag {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Phase 5: Premium polish utilities */
+  .hover-scale-sm {
+    @apply transition-smooth hover:scale-105;
+  }
+
+  .hover-scale-xs {
+    @apply transition-fast;
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  .badge-pop {
+    animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-card to-background;
+  }
+
+  .status-ring {
+    @apply ring-2 ring-offset-1 ring-offset-background;
+  }
+
+  .status-ring-green {
+    @apply ring-primary;
+  }
+
+  .status-ring-red {
+    @apply ring-destructive;
+  }
+
+  .status-ring-orange {
+    @apply ring-[oklch(var(--status-orange))];
+  }
+
+  .status-ring-blue {
+    @apply ring-[oklch(var(--status-blue))];
+  }
+
+  .status-ring-purple {
+    @apply ring-[oklch(var(--status-purple))];
+  }
+
+  .grid-subtle-bg {
+    background-image: linear-gradient(
+        0deg,
+        oklch(var(--grid-subtle) / 0.12) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        oklch(var(--grid-subtle) / 0.12) 1px,
+        transparent 1px
+      );
+    background-size: 16px 16px;
+  }
+
+  .heading-h1 {
+    @apply text-display text-3xl font-bold tracking-tight md:text-4xl;
+  }
+
+  .heading-h2 {
+    @apply text-display text-2xl font-semibold tracking-tight;
+  }
+
+  @keyframes badge-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes scale-102 {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1.02);
+    }
+  }
+
+  .text-display {
+    @apply font-display font-semibold tracking-tight;
+  }
+
+  .text-body {
+    @apply font-body font-normal;
+  }
+
+  .focus-ring-primary {
+    outline: 2px solid oklch(var(--primary));
+    outline-offset: 2px;
+  }
+
+  .focus-ring-on-dark {
+    outline: 2px solid oklch(var(--primary));
+    outline-offset: 2px;
+  }
+
+  .table-cell-empty {
+    @apply bg-primary border-primary;
+  }
+
+  .table-cell-reserved {
+    @apply bg-secondary border-secondary;
+  }
+
+  .table-cell-occupied {
+    @apply bg-destructive border-destructive;
+  }
+
+  .table-cell-premium {
+    @apply bg-accent border-accent;
+  }
+
+  .table-cell-unavailable {
+    @apply bg-muted border-muted;
+  }
+
+  .language-toggle {
+    @apply flex gap-1 rounded-full bg-muted/20 p-1 transition-smooth;
+  }
+
+  .language-option {
+    @apply rounded-full px-3 py-1.5 text-xs font-semibold transition-fast;
+  }
+
+  .language-option-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .language-option-inactive {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  /* Phase 4: AI suggestions & seasonal features */
+  .ai-suggestion-card {
+    @apply rounded-lg bg-primary/10 p-4 shadow-soft border border-primary/20 transition-smooth;
+  }
+
+  .ai-suggestion-accept {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:shadow-elevated transition-smooth;
+  }
+
+  .ai-suggestion-reject {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground font-semibold hover:bg-muted/80 transition-smooth;
+  }
+
+  .confidence-meter {
+    @apply h-1.5 rounded-full bg-muted overflow-hidden;
+  }
+
+  .confidence-fill {
+    @apply h-full bg-accent rounded-full transition-smooth;
+  }
+
+  .seasonal-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-semibold border border-accent/30 transition-smooth;
+  }
+
+  .seasonal-active-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-semibold border border-accent animate-pulse-subtle shadow-soft;
+  }
+
+  .review-request-delay {
+    @apply inline-block px-4 py-2 rounded-lg bg-muted text-muted-foreground font-semibold hover:bg-muted/80 cursor-pointer transition-fast;
+  }
+
+  .review-request-delay-selected {
+    @apply bg-primary text-primary-foreground hover:shadow-soft;
+  }
+
+  .apply-style-button {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold hover:shadow-elevated transition-smooth;
+  }
+
+  .email-template-preview {
+    @apply rounded-lg bg-card p-6 shadow-soft border border-border transition-smooth;
+  }
+
+  .suggestion-slide-in {
+    animation: suggestion-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .suggestion-fade-in {
+    animation: suggestion-fade-in 0.3s ease-out;
+  }
+
+  @keyframes suggestion-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes suggestion-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Phase 5: Page fade-in transition */
+  .page-fade-in {
+    animation: page-fade-in 0.2s ease-out;
+  }
+
+  @keyframes page-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Phase 5: Button press micro-interaction */
+  .btn-press {
+    @apply transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98];
+  }
+}
+
+/* Phase 5: Light theme via data-theme attribute (toggled from settings) */
+[data-theme="light"] {
+  --background: 0.98 0.02 70;
+  --foreground: 0.28 0.02 273;
+  --card: 1.0 0 0;
+  --card-foreground: 0.28 0.02 273;
+  --popover: 1.0 0 0;
+  --popover-foreground: 0.28 0.02 273;
+  --primary: 0.7 0.19 142;
+  --primary-foreground: 1.0 0 0;
+  --secondary: 0.64 0.16 258;
+  --secondary-foreground: 1.0 0 0;
+  --muted: 0.95 0.01 70;
+  --muted-foreground: 0.5 0.01 70;
+  --accent: 0.72 0.14 70;
+  --accent-foreground: 1.0 0 0;
+  --destructive: 0.6 0.21 25;
+  --destructive-foreground: 1.0 0 0;
+  --border: 0.92 0.01 70;
+  --input: 0.95 0.01 70;
+  --ring: 0.7 0.19 142;
+}

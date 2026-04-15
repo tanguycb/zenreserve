@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "reservations": "Reserveringen",
+    "guests": "Gasten",
+    "experiences": "Ervaringen",
+    "waitlist": "Wachtlijst",
+    "seatingPlan": "Tafelplan",
+    "analytics": "Analyse",
+    "guestApp": "Gasten Zoeken"
+  },
+  "actions": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "back": "Terug",
+    "next": "Volgende",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "loading": "Laden...",
+    "retry": "Opnieuw proberen",
+    "logout": "Uitloggen"
+  },
+  "status": {
+    "confirmed": "Bevestigd",
+    "pending": "In afwachting",
+    "cancelled": "Geannuleerd",
+    "waitlist": "Wachtlijst",
+    "seated": "Gezeten",
+    "completed": "Voltooid",
+    "noShow": "Niet verschenen"
+  },
+  "errors": {
+    "generic": "Er is een fout opgetreden",
+    "notFound": "Niet gevonden",
+    "unauthorized": "Geen toegang"
+  },
+  "language": {
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français",
+    "switchLabel": "Taal"
+  },
+  "branding": {
+    "builtWith": "Gebouwd met liefde via"
+  },
+  "accessibility": {
+    "skipToContent": "Ga naar inhoud"
+  }
+}

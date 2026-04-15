@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "reservations": "Reservations",
+    "guests": "Guests",
+    "experiences": "Experiences",
+    "waitlist": "Waitlist",
+    "seatingPlan": "Seating Plan",
+    "analytics": "Analytics",
+    "guestApp": "Find a Restaurant"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "logout": "Log out"
+  },
+  "status": {
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "waitlist": "Waitlist",
+    "seated": "Seated",
+    "completed": "Completed",
+    "noShow": "No Show"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized"
+  },
+  "language": {
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français",
+    "switchLabel": "Language"
+  },
+  "branding": {
+    "builtWith": "Built with love using"
+  },
+  "accessibility": {
+    "skipToContent": "Skip to content"
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "steps": {
+    "dateTime": "Datum & Tijd",
+    "partySize": "Aantal Gasten",
+    "experiences": "Ervaringen",
+    "details": "Uw Gegevens",
+    "confirmation": "Bevestiging"
+  },
+  "dateStep": {
+    "title": "Kies een datum",
+    "subtitle": "Selecteer een beschikbare datum voor uw reservering",
+    "loading": "Datum laden...",
+    "available": "Beschikbaar",
+    "fullyBooked": "Volgeboekt",
+    "prevMonth": "Vorige maand",
+    "nextMonth": "Volgende maand",
+    "weekdays": ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
+    "months": [
+      "Januari",
+      "Februari",
+      "Maart",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Augustus",
+      "September",
+      "Oktober",
+      "November",
+      "December"
+    ]
+  },
+  "timeStep": {
+    "title": "Kies een tijdslot",
+    "loading": "Tijdsloten laden...",
+    "available": "Beschikbaar",
+    "limited": "Beperkt",
+    "full": "Vol",
+    "premium": "Premium",
+    "allFull": "Volledig volgeboekt",
+    "allFullSub": "Alle tijdsloten op deze datum zijn bezet.",
+    "waitlistCta": "Zet me op de wachtlijst",
+    "places": "pl.",
+    "slots": "Beschikbare tijdsloten"
+  },
+  "partySizeStep": {
+    "title": "Aantal personen",
+    "person": "persoon",
+    "persons": "personen",
+    "decreaseLabel": "Minder gasten",
+    "increaseLabel": "Meer gasten",
+    "quickSelect": "Snel aantal gasten kiezen",
+    "babies": "Baby's / kinderen < 3 jaar",
+    "babiesSub": "Gratis — kinderstoel aanwezig",
+    "largeGroup": "Voor groepen > 8 personen nemen wij contact met u op."
+  },
+  "experienceStep": {
+    "title": "Voeg een ervaring toe",
+    "optional": "(optioneel)",
+    "loading": "Ervaringen laden...",
+    "noPreference": "Geen voorkeur",
+    "noPreferenceSub": "Gewoon een heerlijke avond à la carte",
+    "perPerson": "p.p.",
+    "skip": "Geen ervaring",
+    "tagMenu": "Menu",
+    "tagEvent": "Evenement",
+    "tagSpecial": "Speciaal"
+  },
+  "detailsStep": {
+    "title": "Uw gegevens",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "email": "E-mailadres",
+    "phone": "Telefoonnummer",
+    "notes": "Bijzonderheden",
+    "notesPlaceholder": "Allergieën, speciale gelegenheden, kinderstoel nodig...",
+    "emailPlaceholder": "naam@voorbeeld.nl",
+    "phonePlaceholder": "+32 xxx xx xx xx",
+    "specialRequests": "Speciale wensen (optioneel)",
+    "termsLabel": "Ik ga akkoord met de algemene voorwaarden",
+    "birthday": "Verjaardag / Jubileum",
+    "birthdaySub": "We zorgen voor een verrassing!",
+    "birthdayDate": "Datum (optioneel)",
+    "required": "Verplichte velden",
+    "errors": {
+      "firstNameRequired": "Voornaam is verplicht",
+      "lastNameRequired": "Achternaam is verplicht",
+      "emailRequired": "E-mailadres is verplicht",
+      "emailInvalid": "Voer een geldig e-mailadres in"
+    }
+  },
+  "paymentStep": {
+    "title": "Betaling",
+    "deposit": "Borgsom voor uw reservering",
+    "depositNote": "persoon",
+    "total": "Totaal",
+    "payButton": "Betaal {{amount}} veilig",
+    "processing": "Verwerken...",
+    "cardName": "Naam op kaart",
+    "cardNumber": "Kaartnummer",
+    "expiry": "Vervaldatum",
+    "cvc": "CVC",
+    "successTitle": "Betaling geslaagd!",
+    "successSub": "Borg van {{amount}} verwerkt.",
+    "errorDefault": "Betaling mislukt. Controleer uw kaartgegevens en probeer opnieuw.",
+    "secureNote": "256-bit SSL · Powered by Stripe · PCI-DSS compliant"
+  },
+  "confirmationStep": {
+    "title": "Reservering bevestigd!",
+    "subtitle": "Bedankt, {{name}}! We zien u graag.",
+    "bookingRef": "Boekingsreferentie",
+    "date": "Datum",
+    "time": "Tijd",
+    "persons": "Personen",
+    "person": "persoon",
+    "personsPlural": "personen",
+    "experience": "Ervaring",
+    "emailConfirm": "Bevestiging naar",
+    "confirmationSent": "Een bevestigingsmail is verzonden naar {{email}}",
+    "addToCalendar": "Agenda",
+    "newBooking": "Nieuwe reservering",
+    "guests": "Gasten"
+  },
+  "waitlist": {
+    "title": "Volledig volgeboekt",
+    "subtitle": "Alle tijden zijn bezet. Zet u op de wachtlijst?",
+    "joinButton": "Wachtlijst"
+  },
+  "cta": {
+    "bookNow": "Nu reserveren",
+    "checkAvailability": "Beschikbaarheid controleren"
+  },
+  "stepIndicator": {
+    "progressLabel": "Stap {{current}} van {{total}}"
+  },
+  "skipLink": "Ga naar reservering",
+  "nav": {
+    "back": "Terug",
+    "next": "Volgende",
+    "toPayment": "Naar betaling",
+    "bookTable": "Tafel Reserveren"
+  }
+}

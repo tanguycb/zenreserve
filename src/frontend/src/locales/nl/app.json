@@ -1,0 +1,29 @@
+{
+  "search": {
+    "title": "Vind uw perfecte restaurant",
+    "subtitle": "Ontdek unieke restaurantbelevenissen",
+    "datePlaceholder": "Kies een datum",
+    "guestsLabel": "Gasten",
+    "searchButton": "Zoeken",
+    "noResults": "Geen beschikbaarheid gevonden",
+    "chooseDate": "Kies een datum om beschikbaarheid te zien",
+    "guest": "gast",
+    "guests": "gasten"
+  },
+  "restaurant": {
+    "bookNow": "Reserveer nu",
+    "viewMenu": "Bekijk menu",
+    "experiences": "Ervaringen",
+    "availability": "Beschikbaarheid",
+    "about": "Over ons",
+    "openingHours": "Openingstijden",
+    "location": "Locatie"
+  },
+  "booking": {
+    "selectedDate": "Geselecteerde datum",
+    "selectedTime": "Geselecteerde tijd",
+    "partySize": "Gezelschap",
+    "continueBooking": "Doorgaan met reserveren",
+    "backToSearch": "Terug naar zoeken"
+  }
+}

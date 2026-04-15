@@ -1,0 +1,29 @@
+{
+  "search": {
+    "title": "Trouvez votre restaurant parfait",
+    "subtitle": "Découvrez des expériences gastronomiques uniques",
+    "datePlaceholder": "Choisissez une date",
+    "guestsLabel": "Convives",
+    "searchButton": "Rechercher",
+    "noResults": "Aucune disponibilité trouvée",
+    "chooseDate": "Choisissez une date pour voir les disponibilités",
+    "guest": "convive",
+    "guests": "convives"
+  },
+  "restaurant": {
+    "bookNow": "Réserver maintenant",
+    "viewMenu": "Voir le menu",
+    "experiences": "Expériences",
+    "availability": "Disponibilité",
+    "about": "À propos",
+    "openingHours": "Horaires d'ouverture",
+    "location": "Localisation"
+  },
+  "booking": {
+    "selectedDate": "Date sélectionnée",
+    "selectedTime": "Heure sélectionnée",
+    "partySize": "Nombre de convives",
+    "continueBooking": "Continuer la réservation",
+    "backToSearch": "Retour à la recherche"
+  }
+}

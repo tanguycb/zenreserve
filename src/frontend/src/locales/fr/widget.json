@@ -1,0 +1,143 @@
+{
+  "steps": {
+    "dateTime": "Date & Heure",
+    "partySize": "Nombre de personnes",
+    "experiences": "Expériences",
+    "details": "Vos coordonnées",
+    "confirmation": "Confirmation"
+  },
+  "dateStep": {
+    "title": "Choisissez une date",
+    "subtitle": "Sélectionnez une date disponible pour votre réservation",
+    "loading": "Chargement des dates...",
+    "available": "Disponible",
+    "fullyBooked": "Complet",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "weekdays": ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"],
+    "months": [
+      "Janvier",
+      "Février",
+      "Mars",
+      "Avril",
+      "Mai",
+      "Juin",
+      "Juillet",
+      "Août",
+      "Septembre",
+      "Octobre",
+      "Novembre",
+      "Décembre"
+    ]
+  },
+  "timeStep": {
+    "title": "Choisissez un créneau",
+    "loading": "Chargement des créneaux...",
+    "available": "Disponible",
+    "limited": "Limité",
+    "full": "Complet",
+    "premium": "Premium",
+    "allFull": "Complet",
+    "allFullSub": "Tous les créneaux de cette date sont pris.",
+    "waitlistCta": "Rejoindre la liste d'attente",
+    "places": "pl.",
+    "slots": "Créneaux disponibles"
+  },
+  "partySizeStep": {
+    "title": "Nombre de personnes",
+    "person": "personne",
+    "persons": "personnes",
+    "decreaseLabel": "Moins de convives",
+    "increaseLabel": "Plus de convives",
+    "quickSelect": "Sélection rapide",
+    "babies": "Bébés / enfants < 3 ans",
+    "babiesSub": "Gratuit — chaises hautes disponibles",
+    "largeGroup": "Pour les groupes > 8 personnes, nous vous contacterons."
+  },
+  "experienceStep": {
+    "title": "Ajouter une expérience",
+    "optional": "(optionnel)",
+    "loading": "Chargement des expériences...",
+    "noPreference": "Pas de préférence",
+    "noPreferenceSub": "Juste une belle soirée à la carte",
+    "perPerson": "p.p.",
+    "skip": "Pas d'expérience",
+    "tagMenu": "Menu",
+    "tagEvent": "Événement",
+    "tagSpecial": "Spécial"
+  },
+  "detailsStep": {
+    "title": "Vos coordonnées",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Adresse e-mail",
+    "phone": "Numéro de téléphone",
+    "notes": "Remarques particulières",
+    "notesPlaceholder": "Allergies, occasions spéciales, chaise haute nécessaire...",
+    "emailPlaceholder": "nom@exemple.com",
+    "phonePlaceholder": "+32 xxx xx xx xx",
+    "specialRequests": "Demandes spéciales (optionnel)",
+    "termsLabel": "J'accepte les conditions générales",
+    "birthday": "Anniversaire / Jubilé",
+    "birthdaySub": "Nous préparerons une surprise!",
+    "birthdayDate": "Date (optionnel)",
+    "required": "Champs obligatoires",
+    "errors": {
+      "firstNameRequired": "Le prénom est obligatoire",
+      "lastNameRequired": "Le nom est obligatoire",
+      "emailRequired": "L'adresse e-mail est obligatoire",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide"
+    }
+  },
+  "paymentStep": {
+    "title": "Paiement",
+    "deposit": "Acompte pour votre réservation",
+    "depositNote": "personne",
+    "total": "Total",
+    "payButton": "Payer {{amount}} en sécurité",
+    "processing": "Traitement en cours...",
+    "cardName": "Nom sur la carte",
+    "cardNumber": "Numéro de carte",
+    "expiry": "Date d'expiration",
+    "cvc": "CVC",
+    "successTitle": "Paiement réussi!",
+    "successSub": "Acompte de {{amount}} traité.",
+    "errorDefault": "Paiement échoué. Veuillez vérifier vos données de carte et réessayer.",
+    "secureNote": "SSL 256 bits · Powered by Stripe · conforme PCI-DSS"
+  },
+  "confirmationStep": {
+    "title": "Réservation confirmée!",
+    "subtitle": "Merci, {{name}}! Nous avons hâte de vous voir.",
+    "bookingRef": "Référence de réservation",
+    "date": "Date",
+    "time": "Heure",
+    "persons": "Personnes",
+    "person": "personne",
+    "personsPlural": "personnes",
+    "experience": "Expérience",
+    "emailConfirm": "Confirmation à",
+    "confirmationSent": "Un e-mail de confirmation a été envoyé à {{email}}",
+    "addToCalendar": "Agenda",
+    "newBooking": "Nouvelle réservation",
+    "guests": "Invités"
+  },
+  "waitlist": {
+    "title": "Complet",
+    "subtitle": "Tous les créneaux sont pris. Rejoindre la liste d'attente?",
+    "joinButton": "Liste d'attente"
+  },
+  "cta": {
+    "bookNow": "Réserver maintenant",
+    "checkAvailability": "Vérifier la disponibilité"
+  },
+  "stepIndicator": {
+    "progressLabel": "Étape {{current}} sur {{total}}"
+  },
+  "skipLink": "Aller à la réservation",
+  "nav": {
+    "back": "Retour",
+    "next": "Suivant",
+    "toPayment": "Vers le paiement",
+    "bookTable": "Faire une réservation"
+  }
+}
