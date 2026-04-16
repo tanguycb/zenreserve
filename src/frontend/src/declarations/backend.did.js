@@ -420,6 +420,7 @@ export const idlService = IDL.Service({
       [IDL.Variant({ 'ok' : IDL.Vec(Table), 'err' : IDL.Text })],
       [],
     ),
+  'hasOwner' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listActiveExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
   'listExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
@@ -457,6 +458,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'searchGuests' : IDL.Func([IDL.Text], [IDL.Vec(Guest)], ['query']),
+  'setOwner' : IDL.Func([IDL.Principal], [], []),
   'setTableStatus' : IDL.Func(
       [TableId, TableStatus],
       [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
@@ -987,6 +989,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Variant({ 'ok' : IDL.Vec(Table), 'err' : IDL.Text })],
         [],
       ),
+    'hasOwner' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listActiveExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
     'listExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
@@ -1024,6 +1027,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'searchGuests' : IDL.Func([IDL.Text], [IDL.Vec(Guest)], ['query']),
+    'setOwner' : IDL.Func([IDL.Principal], [], []),
     'setTableStatus' : IDL.Func(
         [TableId, TableStatus],
         [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],

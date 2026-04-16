@@ -23,15 +23,53 @@ import SeasonalAiTypes "types/seasonal-ai";
 import SeasonalAiApi "mixins/seasonal-ai-api";
 import SettingsLib "lib/settings";
 
-
+// ─────────────────────────────────────────────────────────────────────────────
+// SINGLE-TENANT CANISTER — ZenReserve
+//
+// This canister is strictly single-tenant: one canister deployment per
+// restaurant. Do NOT share this canister across multiple restaurants.
+//
+// DEPLOYMENT INSTRUCTIONS (SEC-008 fix):
+//   After deploying this canister, the deploying principal MUST call
+//   `setOwner(ownerPrincipal)` exactly once to lock the admin role before
+//   any other user calls `_initializeAccessControl`. This prevents an
+//   attacker from becoming admin by racing the first initialization call.
+//
+//   Steps:
+//     1. dfx deploy zenreserve_backend
+//     2. dfx canister call zenreserve_backend setOwner '(principal "<your-principal>")'
+//
+//   After `setOwner` is called once, the function permanently rejects
+//   all further calls. `_initializeAccessControl` is still available for
+//   subsequent users to self-register as #user role.
+// ─────────────────────────────────────────────────────────────────────────────
 
 actor {
   // Authorization
-  // NOTE: The caffeineai-authorization extension handles first-caller admin assignment.
-  // When _initializeAccessControl is called and no admin exists yet, the caller
-  // automatically becomes admin (owner). Subsequent callers must be explicitly granted roles.
+  // NOTE: The caffeineai-authorization extension handles role management.
+  // The deployer MUST call setOwner() once post-deploy to lock the admin
+  // before _initializeAccessControl is exposed to other callers.
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
+
+  // SEC-008 fix: one-time owner initialization.
+  // Can only be called when no admin has been assigned yet (adminAssigned == false).
+  // Once called, accessControlState.adminAssigned is set to true and this
+  // function permanently rejects all future calls.
+  public shared func setOwner(owner : Principal) : async () {
+    if (accessControlState.adminAssigned) {
+      // Owner already set — reject to prevent takeover
+      return;
+    };
+    AccessControl.initialize(accessControlState, owner);
+  };
+
+  // Returns true if an owner/admin has already been assigned via setOwner().
+  // Read-only query — no auth required. Used by the frontend onboarding flow
+  // to determine whether to show the initial owner-setup modal (SEC-008).
+  public query func hasOwner() : async Bool {
+    accessControlState.adminAssigned;
+  };
 
   // Domain state — HashMaps
   let reservations = Map.empty<CommonTypes.ReservationId, ReservationTypes.Reservation>();

@@ -459,6 +459,7 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    hasOwner(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     listActiveExperiences(): Promise<Array<Experience>>;
     listExperiences(): Promise<Array<Experience>>;
@@ -502,6 +503,7 @@ export interface backendInterface {
         err: string;
     }>;
     searchGuests(searchQuery: string): Promise<Array<Guest>>;
+    setOwner(owner: Principal): Promise<void>;
     setTableStatus(tableId: TableId, status: TableStatus): Promise<{
         __kind__: "ok";
         ok: Table;
@@ -1198,6 +1200,20 @@ export class Backend implements backendInterface {
             return from_candid_variant_n67(this._uploadFile, this._downloadFile, result);
         }
     }
+    async hasOwner(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.hasOwner();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.hasOwner();
+            return result;
+        }
+    }
     async isCallerAdmin(): Promise<boolean> {
         if (this.processError) {
             try {
@@ -1408,6 +1424,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.searchGuests(arg0);
             return from_candid_vec_n68(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async setOwner(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setOwner(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setOwner(arg0);
+            return result;
         }
     }
     async setTableStatus(arg0: TableId, arg1: TableStatus): Promise<{

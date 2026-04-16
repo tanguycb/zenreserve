@@ -364,6 +364,7 @@ export interface _SERVICE {
     { 'ok' : Array<Table> } |
       { 'err' : string }
   >,
+  'hasOwner' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listActiveExperiences' : ActorMethod<[], Array<Experience>>,
   'listExperiences' : ActorMethod<[], Array<Experience>>,
@@ -397,6 +398,7 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'searchGuests' : ActorMethod<[string], Array<Guest>>,
+  'setOwner' : ActorMethod<[Principal], undefined>,
   'setTableStatus' : ActorMethod<
     [TableId, TableStatus],
     { 'ok' : Table } |

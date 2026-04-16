@@ -416,4 +416,8 @@ export const mockBackend: backendInterface = {
   }),
 
   _initializeAccessControl: async () => undefined,
+
+  hasOwner: async () => false,
+
+  setOwner: async (_owner) => undefined,
 };

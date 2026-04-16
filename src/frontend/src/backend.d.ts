@@ -376,6 +376,7 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    hasOwner(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     listActiveExperiences(): Promise<Array<Experience>>;
     listExperiences(): Promise<Array<Experience>>;
@@ -419,6 +420,7 @@ export interface backendInterface {
         err: string;
     }>;
     searchGuests(searchQuery: string): Promise<Array<Guest>>;
+    setOwner(owner: Principal): Promise<void>;
     setTableStatus(tableId: TableId, status: TableStatus): Promise<{
         __kind__: "ok";
         ok: Table;

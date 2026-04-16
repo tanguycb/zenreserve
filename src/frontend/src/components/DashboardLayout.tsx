@@ -22,9 +22,10 @@ import {
   X,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { OnboardingModal } from "./OnboardingModal";
 import { RolePickerInline } from "./RolePickerInline";
 
 interface NavItem {
@@ -116,6 +117,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { logout, isAuthenticated, role, storedRole, requireOwner } = useAuth();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
@@ -124,6 +126,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const restaurantName = generalInfo?.restaurantName || "ZenReserve";
   const logoUrl = generalInfo?.logoUrl || "";
+
+  useEffect(() => {
+    if (
+      storedRole === "owner" &&
+      localStorage.getItem("zenreserve_owner_activated") !== "true"
+    ) {
+      setShowOnboarding(true);
+    }
+  }, [storedRole]);
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -146,6 +157,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="dark min-h-screen flex bg-background text-foreground">
+      {/* Onboarding modal — shown on first owner login until setOwner is called */}
+      {showOnboarding && (
+        <OnboardingModal onComplete={() => setShowOnboarding(false)} />
+      )}
+
       {/* Skip link */}
       <a
         href="#dashboard-main"

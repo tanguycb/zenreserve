@@ -385,6 +385,7 @@ service : {
       err: text;
       ok: vec Table;
     });
+  hasOwner: () -> (bool) query;
   isCallerAdmin: () -> (bool) query;
   listActiveExperiences: () -> (vec Experience) query;
   listExperiences: () -> (vec Experience) query;
@@ -415,6 +416,7 @@ service : {
                                                      ok;
                                                    });
   searchGuests: (searchQuery: text) -> (vec Guest) query;
+  setOwner: (owner: principal) -> ();
   setTableStatus: (tableId: TableId, status: TableStatus) ->
    (variant {
       err: text;
