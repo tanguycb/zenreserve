@@ -18,13 +18,13 @@ type ViewMode = "grid" | "list";
 function getTagStyle(tag: string): string {
   const lower = tag.toLowerCase();
   if (lower === "vip")
-    return "bg-amber-500/15 text-amber-400 border-amber-500/25";
+    return "bg-[oklch(var(--status-orange)/0.15)] text-[oklch(var(--status-orange))] border-[oklch(var(--status-orange)/0.25)]";
   if (lower === "allergieën")
-    return "bg-red-500/15 text-red-400 border-red-500/25";
+    return "bg-destructive/15 text-destructive border-destructive/25";
   if (lower === "verjaardag")
-    return "bg-blue-500/15 text-blue-400 border-blue-500/25";
+    return "bg-[oklch(var(--status-blue)/0.15)] text-[oklch(var(--status-blue))] border-[oklch(var(--status-blue)/0.25)]";
   if (lower === "stamgast")
-    return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
+    return "bg-primary/15 text-primary border-primary/25";
   return "bg-muted text-muted-foreground border-border";
 }
 
@@ -77,7 +77,7 @@ export default function GuestsPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {vipCount > 0 && (
-            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/25 px-3 py-1.5">
+            <Badge className="bg-[oklch(var(--status-orange)/0.15)] text-[oklch(var(--status-orange))] border border-[oklch(var(--status-orange)/0.25)] px-3 py-1.5">
               <Star className="h-3.5 w-3.5 mr-1.5" fill="currentColor" />
               {vipCount} {t("dashboard:guests.vip")}
             </Badge>
@@ -210,7 +210,7 @@ export default function GuestsPage() {
                     <div className="flex items-center gap-2">
                       {guest.vip && (
                         <Star
-                          className="h-3.5 w-3.5 text-amber-400 shrink-0"
+                          className="h-3.5 w-3.5 text-[oklch(var(--status-orange))] shrink-0"
                           fill="currentColor"
                         />
                       )}

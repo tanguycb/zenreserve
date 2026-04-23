@@ -16,11 +16,14 @@ mixin (
     description : Text,
     pricePerPerson : Nat,
     maxCapacity : Nat,
+    required : Bool,
+    serviceIds : ?[Text],
+    dayOfWeek : ?[Nat],
   ) : async ExperienceTypes.Experience {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized");
     };
-    ExperienceLib.create(experiences, experienceCounter, name, description, pricePerPerson, maxCapacity);
+    ExperienceLib.create(experiences, experienceCounter, name, description, pricePerPerson, maxCapacity, required, serviceIds, dayOfWeek);
   };
 
   public shared ({ caller }) func updateExperience(experience : ExperienceTypes.Experience) : async () {
@@ -31,10 +34,12 @@ mixin (
   };
 
   public query func listExperiences() : async [ExperienceTypes.Experience] {
-    ExperienceLib.list(experiences, false);
+    ExperienceLib.list(experiences, false, null, null);
   };
 
-  public query func listActiveExperiences() : async [ExperienceTypes.Experience] {
-    ExperienceLib.list(experiences, true);
+  // Returns active experiences, optionally filtered by service name and/or day-of-week (0=Sun).
+  // Pass null for either filter to skip it.
+  public query func listActiveExperiences(serviceFilter : ?Text, dayFilter : ?Nat) : async [ExperienceTypes.Experience] {
+    ExperienceLib.list(experiences, true, serviceFilter, dayFilter);
   };
 };

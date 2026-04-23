@@ -11,6 +11,17 @@ import type {
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+// Helper: unwrap the Result returned by getExtendedConfig()
+async function fetchExtendedConfig(
+  actor: Awaited<ReturnType<typeof createActor>>,
+): Promise<RestaurantExtendedConfig> {
+  const result = await actor.getExtendedConfig();
+  if (result.__kind__ === "err") {
+    throw new Error(`getExtendedConfig failed: ${result.err}`);
+  }
+  return result.ok;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface GeneralInfo {
@@ -64,6 +75,7 @@ export interface CapacityConfig {
   zones: Zone[];
   tableTypes: TableType[];
   occupancyCeiling: number;
+  totalSeatsPerSlot: number;
 }
 
 export interface BrandingConfig {
@@ -86,7 +98,7 @@ export function useExtendedConfig() {
     queryKey: ["extendedConfig"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      return actor.getExtendedConfig();
+      return fetchExtendedConfig(actor);
     },
     enabled: !!actor && !isFetching,
     staleTime: 60_000,
@@ -110,7 +122,7 @@ export function useGeneralInfo() {
           contactEmail: "",
         };
       }
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return {
         restaurantName: cfg.restaurantName,
         logoUrl: cfg.logoUrl ?? "",
@@ -179,7 +191,7 @@ export function useOpeningHoursConfig() {
           exceptionalClosingDays: [],
         };
       }
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return {
         services: cfg.services.map((s) => ({
           id: s.id,
@@ -280,9 +292,14 @@ export function useCapacityConfig() {
             { id: "t6", name: "6-persoons", seatsPerTable: 6, count: 4 },
           ],
           occupancyCeiling: 85,
+          totalSeatsPerSlot: 20,
         };
       }
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
+      // Read totalSeatsPerSlot directly from extendedConfig (same source that
+      // updateCapacitySettings writes to), so the displayed value always
+      // reflects what was last saved (fixes BUG-SETTINGS-SEATS).
+      const totalSeatsPerSlot = Number(cfg.totalSeatsPerSlot ?? 20);
       return {
         serviceMaxGuests: Object.fromEntries(
           cfg.services.map((s) => [s.id, Number(s.maxCapacity)]),
@@ -307,6 +324,7 @@ export function useCapacityConfig() {
         occupancyCeiling: Number(
           cfg.occupancySettings?.globalCeilingPercent ?? 85,
         ),
+        totalSeatsPerSlot,
       };
     },
     enabled: !!actor && !isFetching,
@@ -338,13 +356,26 @@ export function useUpdateCapacityConfig() {
         zones,
         tableTypes,
         occupancySettings,
-        BigInt(20),
+        BigInt(config.totalSeatsPerSlot ?? 20),
       );
       if (result.__kind__ === "err") throw new Error(result.err);
+
+      // Auto-sync tables to the floor plan after saving capacity settings.
+      try {
+        const syncResult = await actor.syncTablesFromSettings();
+        if (syncResult.__kind__ === "err") {
+          console.warn("syncTablesFromSettings failed:", syncResult.err);
+        }
+      } catch {
+        // Non-fatal: sync failure doesn't prevent settings from saving
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capacityConfig"] });
       queryClient.invalidateQueries({ queryKey: ["extendedConfig"] });
+      // Refresh floor plan so newly synced tables appear immediately
+      queryClient.invalidateQueries({ queryKey: ["floorState"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
     },
   });
 }
@@ -369,7 +400,7 @@ export function useBrandingConfig() {
           reminderHoursBefore: 24,
         };
       }
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return {
         primaryColor: cfg.branding.primaryColor,
         accentColor: cfg.branding.accentColor,
@@ -446,7 +477,7 @@ export function useReservationRules() {
     queryKey: ["reservationRules"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       const r = cfg.reservationRules;
       return {
         advanceBookingDays: Number(r.advanceBookingDays),
@@ -504,7 +535,7 @@ export function useGuestFormSettings() {
     queryKey: ["guestFormSettings"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return cfg.guestForm;
     },
     enabled: !!actor && !isFetching,
@@ -536,7 +567,7 @@ export function useIntegrationSettings() {
     queryKey: ["integrationSettings"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return cfg.integrations;
     },
     enabled: !!actor && !isFetching,
@@ -568,7 +599,7 @@ export function useNotificationSettings() {
     queryKey: ["notificationSettings"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      const cfg = await actor.getExtendedConfig();
+      const cfg = await fetchExtendedConfig(actor);
       return cfg.notifications;
     },
     enabled: !!actor && !isFetching,
@@ -588,6 +619,114 @@ export function useUpdateNotificationSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notificationSettings"] });
       queryClient.invalidateQueries({ queryKey: ["extendedConfig"] });
+    },
+  });
+}
+
+// ── Table Group Definitions ───────────────────────────────────────────────────
+
+export interface TableGroupDefinition {
+  id: string;
+  name: string;
+  tableIds: string[];
+  description: string;
+  totalCapacity: number;
+}
+
+export function useTableGroupDefinitions() {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<TableGroupDefinition[]>({
+    queryKey: ["tableGroupDefinitions"],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        const result = await actor.getTableGroupDefinitions();
+        if (result.__kind__ === "err") return [];
+        return result.ok.map((g) => ({
+          id: String(g.id),
+          name: g.name,
+          tableIds: Array.isArray(g.tableIds) ? g.tableIds.map(String) : [],
+          description: g.description ?? "",
+          totalCapacity: Number(g.totalCapacity ?? 0),
+        }));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateTableGroupDefinition() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { name: string; tableIds: string[]; description: string }
+  >({
+    mutationFn: async ({ name, tableIds, description }) => {
+      if (!actor) throw new Error("Actor not available");
+      const result = await actor.createTableGroupDefinition(
+        name,
+        tableIds,
+        description,
+      );
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableGroupDefinitions"],
+      });
+    },
+  });
+}
+
+export function useUpdateTableGroupDefinition() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    {
+      id: string;
+      name: string;
+      tableIds: string[];
+      description: string;
+    }
+  >({
+    mutationFn: async ({ id, name, tableIds, description }) => {
+      if (!actor) throw new Error("Actor not available");
+      const result = await actor.updateTableGroupDefinition(
+        id,
+        name,
+        tableIds,
+        description,
+      );
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableGroupDefinitions"],
+      });
+    },
+  });
+}
+
+export function useDeleteTableGroupDefinition() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      if (!actor) throw new Error("Actor not available");
+      const result = await actor.deleteTableGroupDefinition(id);
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableGroupDefinitions"],
+      });
     },
   });
 }

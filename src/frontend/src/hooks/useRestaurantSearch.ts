@@ -1,13 +1,39 @@
+import { useExperiences } from "@/hooks/useDashboard";
 import { useAvailableSlots } from "@/hooks/useReservation";
+import { useExtendedConfig } from "@/hooks/useSettings";
 import type { Experience, Restaurant } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 
 // ── useRestaurantConfig ───────────────────────────────────────────────────────
-export function useRestaurantConfig() {
+export function useRestaurantConfig(): {
+  data: Restaurant | null;
+  isLoading: boolean;
+  isError: boolean;
+  experiences: Experience[];
+} {
+  const configQuery = useExtendedConfig();
+  const experiencesQuery = useExperiences();
+
+  const cfg = configQuery.data;
+  const restaurant: Restaurant | null = cfg
+    ? {
+        id: "restaurant",
+        name: cfg.restaurantName,
+        address: cfg.contactPhone, // contactPhone used as address fallback; general address not exposed
+        phone: cfg.contactPhone,
+        email: cfg.contactEmail,
+        logoUrl: cfg.logoUrl ?? undefined,
+        timezone: cfg.timezone,
+        maxPartySize: Number(cfg.reservationRules?.maxPartySize ?? 12),
+        stripeEnabled: cfg.integrations?.stripeEnabled ?? false,
+      }
+    : null;
+
   return {
-    data: null as Restaurant | null,
-    isLoading: false,
-    experiences: [] as Experience[],
+    data: restaurant,
+    isLoading: configQuery.isLoading || experiencesQuery.isLoading,
+    isError: configQuery.isError || experiencesQuery.isError,
+    experiences: experiencesQuery.data ?? [],
   };
 }
 

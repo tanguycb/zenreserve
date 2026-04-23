@@ -9,7 +9,37 @@
     "noShows": "No-shows",
     "kpiSection": "Indicateurs de performance",
     "revenueToday": "Chiffre d'affaires aujourd'hui",
-    "today": "Aujourd'hui"
+    "today": "Aujourd'hui",
+    "occupancyWidget": "Occupation aujourd'hui",
+    "barometerSubtitle": "Baromètre d'affluence",
+    "barometerLow": "Calme",
+    "barometerMedium": "Chargé",
+    "barometerHigh": "Complet",
+    "barometerSeats": "places",
+    "couvertsToday": "Couverts aujourd'hui",
+    "waitlistCount": "Liste d'attente aujourd'hui",
+    "cancellationRate": "Taux d'annulation",
+    "newReservation": "Nouvelle réservation",
+    "newReservationOption": "Réservation",
+    "newReservationOptionHint": "Inviter un client",
+    "walkInOption": "Walk-In",
+    "walkInOptionHint": "Sans réservation",
+    "couvertsPerService": "Couverts par service aujourd'hui",
+    "noCouverts": "Aucun couvert aujourd'hui",
+    "covers": "couv.",
+    "serviceLunch": "Déjeuner",
+    "serviceDiner": "Dîner",
+    "aiInsightLabel": "Insight IA"
+  },
+  "walkIn": {
+    "title": "Walk-In",
+    "activeService": "Service actuel",
+    "description": "Sélectionnez le service et accédez directement au plan de salle pour marquer une table disponible comme occupée. Aucune donnée client requise.",
+    "serviceLunch": "Déjeuner",
+    "serviceDiner": "Dîner",
+    "now": "Actif maintenant",
+    "cancel": "Annuler",
+    "confirm": "Aller au plan de salle"
   },
   "reservations": {
     "title": "Réservations",
@@ -39,7 +69,17 @@
       "partyShort": "Nb. personnes",
       "experience": "Expérience",
       "status": "Statut",
-      "actions": "Actions"
+      "actions": "Actions",
+      "table": "Table"
+    },
+    "reservation": {
+      "table": "Table",
+      "noTable": "Aucune table assignée",
+      "assignTable": "Assigner une table",
+      "changeTable": "Changer de table",
+      "unlinkTable": "Désassigner",
+      "tableAssigned": "Table assignée",
+      "selectTable": "Choisir une table"
     },
     "actions": {
       "view": "Voir la réservation de {{name}}",
@@ -51,7 +91,21 @@
       "title": "Vue du plan de salle",
       "filter_message": "Réservations filtrées par Table {{table}} — cliquez à nouveau pour effacer"
     },
-    "statusError": "Échec de la mise à jour du statut. Veuillez réessayer."
+    "statusError": "Échec de la mise à jour du statut. Veuillez réessayer.",
+    "edit": "Modifier",
+    "saveChanges": "Enregistrer les modifications",
+    "cancelEdit": "Annuler",
+    "changeHistory": "Historique",
+    "noChanges": "Aucune modification",
+    "changedBy": "Modifié par",
+    "fields": {
+      "date": "Date",
+      "time": "Heure",
+      "partySize": "Nombre de personnes",
+      "notes": "Remarques",
+      "status": "Statut",
+      "experience": "Expérience"
+    }
   },
   "newReservation": {
     "title": "Nouvelle réservation",
@@ -70,6 +124,9 @@
     "table": "Table",
     "autoAssign": "Attribution automatique",
     "autoAssignHint": "Choisissez 'Automatique' pour une sélection intelligente de table selon la taille du groupe",
+    "experience": "Expérience (optionnel)",
+    "noExperience": "Pas d'expérience",
+    "experienceOnlyDuring": "uniquement pendant {{services}}",
     "paymentStatus": "Statut de paiement",
     "paymentNone": "Aucun paiement",
     "paymentPending": "En attente",
@@ -138,7 +195,22 @@
     "tagEvent": "Événement",
     "tagSpecial": "Spécial",
     "empty": "Aucune expérience créée",
-    "emptyHint": "Ajoutez votre premier menu, événement ou spécial pour offrir des options supplémentaires lors de la réservation"
+    "emptyHint": "Ajoutez votre premier menu, événement ou spécial pour offrir des options supplémentaires lors de la réservation",
+    "requiredToggle": "Obligatoire pour les clients",
+    "requiredHint": "Le client doit choisir une expérience",
+    "optionalHint": "Le client peut ignorer l'expérience",
+    "markedRequired": "\"{{name}}\" marqué comme obligatoire",
+    "markedOptional": "\"{{name}}\" marqué comme optionnel",
+    "deleteTitle": "Supprimer l'expérience",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action est irréversible.",
+    "servicesLabel": "Applicable au service",
+    "servicesHint": "Ne rien sélectionner = applicable à tous les services",
+    "allServices": "Tous les services",
+    "serviceLunch": "Déjeuner",
+    "serviceDiner": "Dîner",
+    "daysLabel": "Applicable aux jours",
+    "daysHint": "Ne rien sélectionner = applicable à tous les jours",
+    "allDays": "Tous les jours"
   },
   "waitlist": {
     "title": "Liste d'attente",
@@ -256,7 +328,13 @@
     "tableAriaLabel": "{{name}}, {{status}}, {{capacity}} places",
     "canvasAriaLabel": "Plan de salle interactif",
     "decreaseCapacity": "Diminuer la capacité",
-    "increaseCapacity": "Augmenter la capacité"
+    "increaseCapacity": "Augmenter la capacité",
+    "noTablesYet": "Aucune table dans le plan de salle",
+    "noTablesYetHint": "Accédez à Paramètres > Capacité pour configurer les tables, ou ajoutez-les manuellement ici.",
+    "importFromSettings": "Importer les tables des paramètres",
+    "syncing": "Importation…",
+    "syncSuccess": "Les tables ont été ajoutées avec succès au plan de salle.",
+    "syncNotAvailable": "La synchronisation n'est pas encore disponible. Ajoutez les tables manuellement."
   },
   "aiSuggestion": {
     "buttonLabel": "Suggestion IA",
@@ -400,6 +478,7 @@
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "saved": "Paramètres enregistrés",
+    "savedWithSync": "Paramètres enregistrés. Les tables ont été automatiquement ajoutées au plan de salle.",
     "saveError": "Échec de l'enregistrement. Veuillez réessayer.",
     "unsavedChanges": "Vous avez des modifications non enregistrées",
     "comingSoon": "Bientôt disponible",
@@ -415,7 +494,53 @@
       "notifications": "Notifications & messages",
       "integrations": "Intégrations",
       "team": "Équipe & droits d'accès",
-      "seasonal": "Paramètres saisonniers"
+      "seasonal": "Paramètres saisonniers",
+      "zones": "Zones",
+      "experiences": "Expériences",
+      "seatingPlan": "Plan de salle"
+    },
+    "seatingSettings": {
+      "title": "Configuration du plan de salle",
+      "subtitle": "Gérez les tables, zones et la disposition de votre plan de salle. {{count}} tables configurées."
+    },
+    "walkin": {
+      "banner": "Mode walk-in — cliquez sur une table pour la marquer comme occupée",
+      "dismiss": "Fermer",
+      "subtitle": "Mode walk-in — cliquez sur une table",
+      "clickHint": "Cliquez sur une table pour la marquer comme occupée pour les clients sans réservation",
+      "alreadyOccupied": "{{name}} est déjà occupée",
+      "markedOccupied": "{{name}} est maintenant marquée comme occupée",
+      "markError": "Impossible de modifier le statut de la table"
+    },
+    "viewOnly": {
+      "subtitle": "{{count}} tables · sélectionnez une date et un service",
+      "noTablesHint": "Accédez à Paramètres → Plan de salle pour ajouter et organiser les tables."
+    },
+    "today": "Aujourd'hui",
+    "datePrev": "Jour précédent",
+    "dateNext": "Jour suivant",
+    "goToToday": "Aller à aujourd'hui",
+    "zones": {
+      "subtitle": "Définissez les espaces de votre restaurant utilisés dans le plan de salle, la disponibilité et les statistiques",
+      "listTitle": "Zones configurées",
+      "listHint": "Chaque zone a une couleur, un nom et un nombre maximum de convives",
+      "addTitle": "Ajouter une nouvelle zone",
+      "addZone": "Ajouter une zone",
+      "name": "Nom",
+      "namePlaceholder": "Ex. Terrasse, Bar, Salle privée…",
+      "maxGuests": "Max. convives",
+      "maxGuestsLabel": "{{count}} convives max.",
+      "color": "Couleur",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer ?",
+      "cancel": "Annuler",
+      "emptyTitle": "Aucune zone configurée",
+      "emptyHint": "Ajoutez votre première zone pour commencer. Les zones sont utilisées dans le plan de salle, le widget et les statistiques.",
+      "added": "Zone ajoutée",
+      "updated": "Zone mise à jour",
+      "deleted": "Zone supprimée",
+      "infoNote": "Les zones sont liées au plan de salle et au widget de réservation. Supprimer une zone la retire également de toutes les tables et filtres."
     },
     "days": {
       "mon": "Lun",
@@ -489,6 +614,23 @@
       "occupancyCeilingHint": "Limiter les réservations pour permettre les walk-ins",
       "occupancyCeilingLabel": "Ne jamais dépasser {{value}}% d'occupation pour permettre les walk-ins"
     },
+    "tableGroups": {
+      "title": "Groupes de tables",
+      "description": "Définissez quelles tables peuvent être combinées pour les grands groupes",
+      "addGroup": "Ajouter un groupe",
+      "groupName": "Nom du groupe",
+      "groupNamePlaceholder": "Ex. Combiné terrasse",
+      "selectTables": "Sélectionner les tables",
+      "totalCapacity": "Capacité totale",
+      "noGroups": "Aucun groupe de tables défini",
+      "noTablesHint": "Ajoutez d'abord des types de tables ci-dessus",
+      "descriptionOptional": "Description (optionnelle)",
+      "descriptionPlaceholder": "Ex. Grande salle pour événements",
+      "deleteConfirm": "Supprimer le groupe ?",
+      "cancel": "Annuler",
+      "saved": "Groupe de tables enregistré",
+      "deleted": "Groupe de tables supprimé"
+    },
     "reservationRules": {
       "subtitle": "Gérez la fenêtre de réservation, la politique d'annulation, l'acompte et la durée de séjour",
       "advanceBookingTitle": "Fenêtre de réservation",
@@ -533,6 +675,8 @@
       "requireAllergiesHint": "Le client doit mentionner ses éventuelles allergies",
       "requireDietPreferences": "Préférences alimentaires obligatoires",
       "requireDietHint": "Le client doit indiquer ses préférences alimentaires",
+      "showBabiesChildren": "Afficher le champ bébés/enfants dans le widget",
+      "showBabiesChildrenHint": "Affiche l'option pour les bébés et enfants (< 3 ans) dans le widget de réservation",
       "specialRequestsTitle": "Demandes spéciales standard",
       "specialRequestsSubtitle": "Activez les options que les clients peuvent cocher lors de leur réservation",
       "specialRequest": {
@@ -756,7 +900,7 @@
       "addMember": "Inviter un collaborateur",
       "invite": "Inviter",
       "invited": "{{name}} invité",
-      "inviteError": "Invitation échouée. Veuillez réessayer.",
+      "inviteError": "Impossible d'ajouter le membre — vérifiez votre connexion et réessayez.",
       "inviteNote": "Le collaborateur devra se connecter avec Internet Identity et sélectionner le rôle assigné.",
       "confirmRemove": "Êtes-vous sûr de vouloir retirer {{name}} de l'équipe?",
       "removed": "{{name}} retiré",
@@ -781,7 +925,10 @@
         "name": "Nom",
         "namePlaceholder": "Sophie Janssen",
         "email": "E-mail",
-        "role": "Attribuer un rôle"
+        "role": "Attribuer un rôle",
+        "principalId": "ID principal Internet Identity",
+        "principalIdPlaceholder": "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxx",
+        "principalIdHint": "L'ID principal est l'identifiant unique du compte Internet Identity du membre. Il peut le trouver en se connectant sur identity.ic0.app."
       }
     },
     "seasonal": {
@@ -835,6 +982,25 @@
       "infoNote": "Les paramètres saisonniers déterminent quelles zones sont disponibles et combien de convives peuvent être réservés par période. Combinez avec les horaires d'ouverture pour un contrôle maximum."
     }
   },
+  "auditLog": {
+    "title": "Journal d'audit",
+    "subtitle": "Aperçu de toutes les modifications de paramètres par les administrateurs",
+    "columns": {
+      "timestamp": "Horodatage",
+      "who": "Qui",
+      "page": "Page",
+      "action": "Action",
+      "summary": "Résumé"
+    },
+    "emptyTitle": "Aucune modification enregistrée",
+    "emptyHint": "Les modifications apparaîtront ici dès que des paramètres seront modifiés",
+    "paginationInfo": "{{from}}–{{to}} sur {{total}} entrées",
+    "prev": "Précédent",
+    "next": "Suivant",
+    "forbidden": "Accès refusé",
+    "forbiddenHint": "Seuls les propriétaires et les managers peuvent consulter le journal d'audit",
+    "backToDashboard": "Retour au tableau de bord"
+  },
   "analytics": {
     "title": "Analyses",
     "subtitle": "Tendances d'occupation, heures de pointe et patterns de réservation",
@@ -872,13 +1038,20 @@
     "prevWeek": "Semaine précédente",
     "nextWeek": "Semaine suivante",
     "currentWeek": "Aller à la semaine actuelle",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "currentMonth": "Aller au mois actuel",
     "dayNames": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+    "dayNamesShort": ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"],
     "reservationCount": "{{count}} réservation",
     "reservationCountPlural": "{{count}} réservations",
     "cardLabel": "{{name}} à {{time}}, {{count}} personnes",
     "legendConfirmed": "Confirmé",
     "legendWaitlist": "Liste d'attente",
     "legendExperience": "Expérience",
-    "legendCancelled": "Annulé"
+    "legendCancelled": "Annulé",
+    "legendAvailable": "< 50% plein",
+    "legendBusy": "50–80% plein",
+    "legendFull": "> 80% plein"
   }
 }

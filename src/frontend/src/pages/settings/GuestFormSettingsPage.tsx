@@ -1,7 +1,16 @@
+import { Variant_text_dropdown } from "@/backend";
+import type {
+  GuestFormSettings as BackendGuestForm,
+  CustomQuestion as BackendQuestion,
+} from "@/backend.d.ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  useGuestFormSettings,
+  useUpdateGuestFormSettings,
+} from "@/hooks/useSettings";
 import {
   ChevronDown,
   ChevronUp,
@@ -30,6 +39,7 @@ export interface GuestFormConfig {
   requirePhone: boolean;
   requireAllergies: boolean;
   requireDietPreferences: boolean;
+  showBabiesChildren: boolean;
   enabledSpecialRequests: string[];
   customQuestions: CustomQuestion[];
 }
@@ -43,30 +53,55 @@ const SPECIAL_REQUESTS = [
   "quietTable",
 ] as const;
 
-const STORAGE_KEY = "zenreserve_guest_form";
+const DEFAULT_CONFIG: GuestFormConfig = {
+  requirePhone: true,
+  requireAllergies: false,
+  requireDietPreferences: false,
+  showBabiesChildren: true,
+  enabledSpecialRequests: ["birthday", "anniversary", "highchair"],
+  customQuestions: [],
+};
 
-function loadConfig(): GuestFormConfig {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as GuestFormConfig;
-  } catch {
-    // ignore
-  }
+// ── Backend conversion helpers ────────────────────────────────────────────────
+
+function backendToLocal(b: BackendGuestForm): GuestFormConfig {
   return {
-    requirePhone: true,
-    requireAllergies: false,
-    requireDietPreferences: false,
-    enabledSpecialRequests: ["birthday", "anniversary", "highchair"],
-    customQuestions: [],
+    requirePhone: b.requirePhone,
+    requireAllergies: b.requireAllergies,
+    requireDietPreferences: b.requireDietPreferences,
+    showBabiesChildren: b.showBabiesChildren,
+    // enabledSpecialRequests is not stored in backend — keep defaults
+    enabledSpecialRequests: DEFAULT_CONFIG.enabledSpecialRequests,
+    customQuestions: b.customQuestions.map((q) => ({
+      id: q.id,
+      labelText: q.labelText,
+      type:
+        q.questionType === Variant_text_dropdown.dropdown ? "dropdown" : "text",
+      options: q.options,
+      required: q.required,
+    })),
   };
 }
 
-function saveConfig(cfg: GuestFormConfig) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
-  } catch {
-    // ignore
-  }
+function localToBackend(local: GuestFormConfig): BackendGuestForm {
+  return {
+    requirePhone: local.requirePhone,
+    requireAllergies: local.requireAllergies,
+    requireDietPreferences: local.requireDietPreferences,
+    showBabiesChildren: local.showBabiesChildren,
+    customQuestions: local.customQuestions.map(
+      (q): BackendQuestion => ({
+        id: q.id,
+        labelText: q.labelText,
+        questionType:
+          q.type === "dropdown"
+            ? Variant_text_dropdown.dropdown
+            : Variant_text_dropdown.text,
+        options: q.options,
+        required: q.required,
+      }),
+    ),
+  };
 }
 
 function genId() {
@@ -308,21 +343,31 @@ function QuestionEditor({
 
 export default function GuestFormSettingsPage() {
   const { t } = useTranslation("dashboard");
-  const [config, setConfig] = useState<GuestFormConfig>(loadConfig);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const { data: backendData, isLoading } = useGuestFormSettings();
+  const updateMutation = useUpdateGuestFormSettings();
 
+  const [config, setConfig] = useState<GuestFormConfig>(DEFAULT_CONFIG);
+  // saved snapshot — isDirty is derived, never manually managed
+  const [saved, setSaved] = useState<GuestFormConfig | null>(null);
+
+  // Sync backend → local on first load
   useEffect(() => {
-    setConfig(loadConfig());
-    setIsDirty(false);
-  }, []);
+    if (backendData) {
+      const local = backendToLocal(backendData);
+      setConfig(local);
+      setSaved(local);
+    }
+  }, [backendData]);
+
+  // Derive isDirty from snapshot comparison
+  const isDirty =
+    saved === null || JSON.stringify(config) !== JSON.stringify(saved);
 
   const update = <K extends keyof GuestFormConfig>(
     key: K,
     value: GuestFormConfig[K],
   ) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
-    setIsDirty(true);
   };
 
   const toggleSpecialRequest = (key: string) => {
@@ -366,18 +411,24 @@ export default function GuestFormSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 300));
-      saveConfig(config);
-      setIsDirty(false);
+      await updateMutation.mutateAsync(localToBackend(config));
+      setSaved(config);
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
-    } finally {
-      setIsSaving(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[GuestFormSettings] save failed:", err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl space-y-6" data-ocid="guest-form-settings-page">
@@ -425,6 +476,14 @@ export default function GuestFormSettingsPage() {
             checked={config.requireDietPreferences}
             onCheckedChange={(v) => update("requireDietPreferences", v)}
             ocid="guest-form-require-diet"
+          />
+          <ToggleRow
+            id="show-babies-children"
+            label={t("settings.guestForm.showBabiesChildren")}
+            hint={t("settings.guestForm.showBabiesChildrenHint")}
+            checked={config.showBabiesChildren}
+            onCheckedChange={(v) => update("showBabiesChildren", v)}
+            ocid="guest-form-show-babies-children"
           />
         </SectionCard>
 
@@ -511,16 +570,18 @@ export default function GuestFormSettingsPage() {
           <div className="ml-auto">
             <Button
               type="submit"
-              disabled={isSaving || !isDirty}
+              disabled={updateMutation.isPending || !isDirty}
               className="gap-2"
               data-ocid="guest-form-save-btn"
             >
-              {isSaving ? (
+              {updateMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {isSaving ? t("settings.saving") : t("settings.save")}
+              {updateMutation.isPending
+                ? t("settings.saving")
+                : t("settings.save")}
             </Button>
           </div>
         </div>

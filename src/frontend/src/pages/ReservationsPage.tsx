@@ -1,16 +1,18 @@
 import { MiniFloorPlan } from "@/components/dashboard/MiniFloorPlan";
 import { NewReservationModal } from "@/components/dashboard/NewReservationModal";
+import { ReservationCalendar } from "@/components/dashboard/ReservationCalendar";
 import { ReservationDetailModal } from "@/components/dashboard/ReservationDetailModal";
 import type { ActiveFilters } from "@/components/dashboard/ReservationFilters";
 import { ReservationFilters } from "@/components/dashboard/ReservationFilters";
 import { ReservationList } from "@/components/dashboard/ReservationList";
-import { ReservationTimeGrid } from "@/components/dashboard/ReservationTimeGrid";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useReservations,
+  useUpdateReservation,
   useUpdateReservationStatus,
 } from "@/hooks/useReservation";
+import { useOpeningHoursConfig } from "@/hooks/useSettings";
 import type { Reservation, ReservationStatus } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, List, Plus, RefreshCw } from "lucide-react";
@@ -21,7 +23,14 @@ import { toast } from "sonner";
 type ViewMode = "calendar" | "list";
 type DateRange = "today" | "week" | "next7";
 
-const TODAY = new Date().toISOString().slice(0, 10);
+/** Compute today's date string in LOCAL time (avoids UTC off-by-one issues) */
+function localTodayString(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 /** Parse "HH:MM" → minutes since midnight */
 function timeToMinutes(t: string): number {
@@ -39,15 +48,11 @@ function matchesService(time: string, service: string): boolean {
 }
 
 function getDateBounds(range: DateRange): { start: string; end: string } {
+  const today = localTodayString();
   const now = new Date();
-  const startOfDay = (d: Date) => {
-    const copy = new Date(d);
-    copy.setHours(0, 0, 0, 0);
-    return copy;
-  };
+
   if (range === "today") {
-    const s = startOfDay(now).toISOString().slice(0, 10);
-    return { start: s, end: s };
+    return { start: today, end: today };
   }
   if (range === "week") {
     const day = now.getDay();
@@ -56,17 +61,24 @@ function getDateBounds(range: DateRange): { start: string; end: string } {
     mon.setDate(now.getDate() + diff);
     const sun = new Date(mon);
     sun.setDate(mon.getDate() + 6);
-    return {
-      start: startOfDay(mon).toISOString().slice(0, 10),
-      end: startOfDay(sun).toISOString().slice(0, 10),
-    };
+    function toLocal(d: Date) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day2 = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day2}`;
+    }
+    return { start: toLocal(mon), end: toLocal(sun) };
   }
+  // next7
   const end = new Date(now);
   end.setDate(now.getDate() + 6);
-  return {
-    start: startOfDay(now).toISOString().slice(0, 10),
-    end: startOfDay(end).toISOString().slice(0, 10),
-  };
+  function toLocal(d: Date) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day2 = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day2}`;
+  }
+  return { start: today, end: toLocal(end) };
 }
 
 export default function ReservationsPage() {
@@ -77,7 +89,9 @@ export default function ReservationsPage() {
     isLoading,
     isFetching,
   } = useReservations();
+  const { data: openingHours } = useOpeningHoursConfig();
   const updateStatus = useUpdateReservationStatus();
+  const updateReservation = useUpdateReservation();
 
   const [view, setView] = useState<ViewMode>("calendar");
   const [dateRange, setDateRange] = useState<DateRange>("today");
@@ -107,6 +121,7 @@ export default function ReservationsPage() {
   }, [allReservations, localOverrides]);
 
   const bounds = getDateBounds(dateRange);
+  const TODAY = localTodayString();
 
   const filtered = useMemo(() => {
     return reservations.filter((r) => {
@@ -137,7 +152,7 @@ export default function ReservationsPage() {
     () =>
       reservations.filter((r) => r.date === TODAY && r.status !== "cancelled")
         .length,
-    [reservations],
+    [reservations, TODAY],
   );
 
   function openDetail(r: Reservation) {
@@ -151,15 +166,12 @@ export default function ReservationsPage() {
   }
 
   function handleReservationSaved(_saved: Reservation) {
-    // Invalidate to refetch from backend — modal already shows the success toast
     queryClient.invalidateQueries({ queryKey: ["reservations"] });
     queryClient.invalidateQueries({ queryKey: ["floorState"] });
   }
 
   function handleStatusChange(id: string, status: ReservationStatus) {
-    // Optimistic local update
     setLocalOverrides((prev) => ({ ...prev, [id]: status }));
-    // Update selected reservation if it's open
     if (selectedReservation?.id === id) {
       setSelectedReservation((prev) => (prev ? { ...prev, status } : prev));
     }
@@ -167,7 +179,6 @@ export default function ReservationsPage() {
       { id, status },
       {
         onSuccess: () => {
-          // Clear override after successful backend sync
           setLocalOverrides((prev) => {
             const next = { ...prev };
             delete next[id];
@@ -175,7 +186,6 @@ export default function ReservationsPage() {
           });
         },
         onError: () => {
-          // Revert on error
           setLocalOverrides((prev) => {
             const next = { ...prev };
             delete next[id];
@@ -198,10 +208,51 @@ export default function ReservationsPage() {
   }
 
   function handleSaveNotes(id: string, notes: string) {
-    // Notes saved locally only (no backend method available)
-    toast.success(t("dashboard:reservations.notesSaved"));
-    void id;
-    void notes;
+    const reservation = allReservations.find((r) => r.id === id);
+    if (!reservation) return;
+    updateReservation.mutate(
+      {
+        id,
+        date: reservation.date,
+        time: reservation.time,
+        partySize: reservation.partySize,
+        specialRequests: notes,
+      },
+      {
+        onSuccess: () => toast.success(t("dashboard:reservations.notesSaved")),
+        onError: () => toast.error(t("dashboard:reservations.statusError")),
+      },
+    );
+  }
+
+  /**
+   * Called when a service pill is clicked in the monthly calendar.
+   * Switches to list view, filtered to the given date and (if possible) service.
+   */
+  function handleCalendarDayService(date: string, serviceId: string) {
+    // Find the service to determine a service filter value
+    const services = openingHours?.services ?? [];
+    const service = services.find((s) => s.id === serviceId);
+
+    // Map service name to a filter keyword (fallback to "all")
+    let serviceFilter = "all";
+    if (service) {
+      const nameLower = service.name.toLowerCase();
+      if (nameLower.includes("lunch")) serviceFilter = "lunch";
+      else if (nameLower.includes("diner") || nameLower.includes("dinner"))
+        serviceFilter = "dinner";
+    }
+
+    setView("list");
+    setFilters((f) => ({
+      ...f,
+      date,
+      service: serviceFilter,
+      status: "all",
+      search: "",
+    }));
+    setDateRange("today"); // reset range so date filter takes precedence
+    setSelectedTable(null);
   }
 
   const DATE_RANGE_LABELS: Record<DateRange, string> = {
@@ -255,7 +306,7 @@ export default function ReservationsPage() {
         </div>
       </div>
 
-      {/* Prominent view toggle */}
+      {/* View toggle */}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -263,7 +314,7 @@ export default function ReservationsPage() {
           data-ocid="toggle-calendar"
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
             view === "calendar"
-              ? "bg-gradient-to-r from-[#1E2937] to-[#0F172A] text-foreground border border-primary/30 shadow-md"
+              ? "bg-gradient-to-r from-card to-background text-foreground border border-primary/30 shadow-md"
               : "bg-muted/40 text-muted-foreground border border-border hover:bg-muted hover:text-foreground"
           }`}
           aria-pressed={view === "calendar"}
@@ -277,7 +328,7 @@ export default function ReservationsPage() {
           data-ocid="toggle-list"
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
             view === "list"
-              ? "bg-gradient-to-r from-[#1E2937] to-[#0F172A] text-foreground border border-primary/30 shadow-md"
+              ? "bg-gradient-to-r from-card to-background text-foreground border border-primary/30 shadow-md"
               : "bg-muted/40 text-muted-foreground border border-border hover:bg-muted hover:text-foreground"
           }`}
           aria-pressed={view === "list"}
@@ -287,49 +338,63 @@ export default function ReservationsPage() {
         </button>
       </div>
 
-      {/* Compact filter bar + date range */}
-      <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {(["today", "week", "next7"] as DateRange[]).map((range) => (
-            <button
-              key={range}
-              type="button"
-              onClick={() => {
-                setDateRange(range);
-                setFilters((f) => ({ ...f, date: "" }));
-              }}
-              data-ocid={`date-range-${range}`}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                dateRange === range && !filters.date
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
-              }`}
-            >
-              {DATE_RANGE_LABELS[range]}
-            </button>
-          ))}
-          {selectedTable && (
-            <button
-              type="button"
-              onClick={() => setSelectedTable(null)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition-colors"
-              data-ocid="clear-table-filter"
-            >
-              Tafel {selectedTable} ×
-            </button>
-          )}
+      {/* Filter bar (list mode only) */}
+      {view === "list" && (
+        <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {(["today", "week", "next7"] as DateRange[]).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => {
+                  setDateRange(range);
+                  setFilters((f) => ({ ...f, date: "" }));
+                }}
+                data-ocid={`date-range-${range}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  dateRange === range && !filters.date
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
+                }`}
+              >
+                {DATE_RANGE_LABELS[range]}
+              </button>
+            ))}
+            {filters.date && (
+              <button
+                type="button"
+                onClick={() => setFilters((f) => ({ ...f, date: "" }))}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition-colors"
+                data-ocid="clear-date-filter"
+              >
+                {filters.date} ×
+              </button>
+            )}
+            {selectedTable && (
+              <button
+                type="button"
+                onClick={() => setSelectedTable(null)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30 transition-colors"
+                data-ocid="clear-table-filter"
+              >
+                Tafel {selectedTable} ×
+              </button>
+            )}
+          </div>
+          <ReservationFilters filters={filters} onChange={setFilters} />
         </div>
-        <ReservationFilters filters={filters} onChange={setFilters} />
-      </div>
+      )}
 
-      {/* Mini floor plan */}
-      <MiniFloorPlan
-        reservations={filtered}
-        selectedTable={selectedTable}
-        onSelectTable={(tableId) =>
-          setSelectedTable((prev) => (prev === tableId ? null : tableId))
-        }
-      />
+      {/* Mini floor plan (list mode only) */}
+      {view === "list" && (
+        <MiniFloorPlan
+          reservations={filtered}
+          selectedTable={selectedTable}
+          onSelectTable={(tableId) =>
+            setSelectedTable((prev) => (prev === tableId ? null : tableId))
+          }
+        />
+      )}
 
       {/* Loading skeleton */}
       {isLoading && (
@@ -343,11 +408,11 @@ export default function ReservationsPage() {
       {/* Calendar or List */}
       {!isLoading &&
         (view === "calendar" ? (
-          <div className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
-            <ReservationTimeGrid
-              reservations={filtered}
-              dateRange={dateRange}
+          <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
+            <ReservationCalendar
+              reservations={reservations}
               onSelectReservation={openDetail}
+              onSelectDayService={handleCalendarDayService}
             />
           </div>
         ) : (

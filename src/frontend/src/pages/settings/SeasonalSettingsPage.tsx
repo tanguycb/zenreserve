@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
-  AVAILABLE_ZONES,
+  FALLBACK_ZONES,
   type SeasonalPeriod,
   detectOverlap,
   useDeleteSeasonalPeriod,
@@ -13,6 +13,7 @@ import {
   useSeasonalPeriods,
   useToggleSeasonalPeriod,
 } from "@/hooks/useSeasonalAI";
+import { useCapacityConfig } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
@@ -67,8 +68,8 @@ function isCurrentlyActive(period: SeasonalPeriod): boolean {
 
 function SeasonIcon({ zones }: { zones: string[] }) {
   if (zones.includes("terras") || zones.includes("rooftop"))
-    return <Sun className="h-4 w-4 text-amber-400" />;
-  return <Snowflake className="h-4 w-4 text-sky-400" />;
+    return <Sun className="h-4 w-4 text-[oklch(var(--status-orange))]" />;
+  return <Snowflake className="h-4 w-4 text-[oklch(var(--status-blue))]" />;
 }
 
 // ── SeasonForm ────────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ interface SeasonFormProps {
   initial: Omit<SeasonalPeriod, "id">;
   existingPeriods: SeasonalPeriod[];
   editId?: string;
+  availableZones: string[];
   onSave: (data: Omit<SeasonalPeriod, "id">) => void;
   onCancel: () => void;
 }
@@ -90,6 +92,7 @@ function SeasonForm({
   initial,
   existingPeriods,
   editId,
+  availableZones,
   onSave,
   onCancel,
 }: SeasonFormProps) {
@@ -257,7 +260,7 @@ function SeasonForm({
             {t("settings.seasonal.activatedZonesHint")}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-            {AVAILABLE_ZONES.map((zone) => {
+            {availableZones.map((zone) => {
               const active = form.activatedZones.includes(zone);
               return (
                 <button
@@ -500,18 +503,18 @@ function SeasonCard({ period, onEdit, onDelete, onToggle }: SeasonCardProps) {
               </h3>
               {live && (
                 <span
-                  className="seasonal-active-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                  className="seasonal-active-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary border border-primary/25"
                   data-ocid={`season-live-badge-${period.id}`}
                 >
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
                   </span>
                   {t("settings.seasonal.statusLive")}
                 </span>
               )}
               {!live && period.isActive && (
-                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-semibold px-2">
+                <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-semibold px-2">
                   {t("settings.seasonal.statusActive")}
                 </Badge>
               )}
@@ -524,7 +527,7 @@ function SeasonCard({ period, onEdit, onDelete, onToggle }: SeasonCardProps) {
                 </Badge>
               )}
               {period.autoActivate && (
-                <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/20 text-[10px] font-medium px-2 gap-1">
+                <Badge className="bg-[oklch(var(--status-blue)/0.1)] text-[oklch(var(--status-blue))] border-[oklch(var(--status-blue)/0.2)] text-[10px] font-medium px-2 gap-1">
                   <Zap className="h-2.5 w-2.5" />
                   {t("settings.seasonal.autoLabel")}
                 </Badge>
@@ -625,9 +628,16 @@ function SeasonCard({ period, onEdit, onDelete, onToggle }: SeasonCardProps) {
 export default function SeasonalSettingsPage() {
   const { t } = useTranslation("dashboard");
   const { data: periods = [], isLoading } = useSeasonalPeriods();
+  const { data: capacityConfig } = useCapacityConfig();
   const saveMutation = useSaveSeasonalPeriod();
   const deleteMutation = useDeleteSeasonalPeriod();
   const toggleMutation = useToggleSeasonalPeriod();
+
+  // BUG-031: derive zone names from real backend config; fall back to sensible defaults
+  const availableZones: string[] =
+    capacityConfig?.zones && capacityConfig.zones.length > 0
+      ? capacityConfig.zones.map((z) => z.name)
+      : [...FALLBACK_ZONES];
 
   const [addingNew, setAddingNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -722,6 +732,7 @@ export default function SeasonalSettingsPage() {
           <SeasonForm
             initial={BLANK_FORM}
             existingPeriods={periods}
+            availableZones={availableZones}
             onSave={handleAdd}
             onCancel={() => setAddingNew(false)}
           />
@@ -785,6 +796,7 @@ export default function SeasonalSettingsPage() {
                       serviceCapacities: period.serviceCapacities ?? {},
                     }}
                     existingPeriods={periods}
+                    availableZones={availableZones}
                     onSave={(data) => handleEdit(period.id, data)}
                     onCancel={() => setEditingId(null)}
                   />

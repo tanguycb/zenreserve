@@ -39,19 +39,18 @@ export interface AnalyticsData {
   partySizeDistribution: PartySizePoint[];
 }
 
-// ── Zone config ───────────────────────────────────────────────────────────────
-
-const ZONES = ["Binnen", "Terras", "Bar", "Privézaal"];
-const ZONE_COLORS: Record<string, string> = {
-  Binnen: "#22C55E",
-  Terras: "#3B82F6",
-  Bar: "#D97706",
-  Privézaal: "#A855F7",
-};
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAYS_NL = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
 const DAYS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+/** Fallback zone label for reservations without zone data */
+const NO_ZONE_LABEL: Record<string, string> = {
+  nl: "Geen zone",
+  en: "No zone",
+  fr: "Sans zone",
+};
 
 // ── Helper: filter by date range ──────────────────────────────────────────────
 
@@ -98,6 +97,7 @@ function computeAnalytics(
   lang: string,
 ): AnalyticsData {
   const filtered = filterByRange(reservations, range, customStart, customEnd);
+  const noZoneLabel = NO_ZONE_LABEL[lang] ?? NO_ZONE_LABEL.nl;
 
   // KPIs
   const cancelled = filtered.filter((r) => r.status === "cancelled").length;
@@ -121,29 +121,58 @@ function computeAnalytics(
   const dayLabels = lang === "fr" ? DAYS_FR : lang === "en" ? DAYS_EN : DAYS_NL;
   const mostPopularDay = dayLabels[maxDayIdx] ?? "-";
 
-  // Zone occupancy by date (last N days)
+  // ── BUG-029 fix: Zone occupancy from real reservation data ────────────────
+  // Group reservations by zone field (r.zone or r.tableZone) to get real counts.
+  // Derive the dynamic zone list from the actual reservation data.
   const days =
     range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 30;
-  const occupancyByZone: ZoneOccupancyPoint[] = [];
-  const zoneNames = ZONES;
 
+  // Collect all unique zone names from the data
+  const zoneSet = new Set<string>();
+  for (const r of filtered) {
+    const zone =
+      (r as Reservation & { zone?: string }).zone ??
+      (r as Reservation & { tableZone?: string }).tableZone ??
+      null;
+    zoneSet.add(zone ?? noZoneLabel);
+  }
+  // If no reservations, provide sensible empty state
+  const zoneNames = zoneSet.size > 0 ? Array.from(zoneSet) : [];
+
+  // Build a map: date -> zone -> total partySize booked
+  const zoneDayMap: Record<string, Record<string, number>> = {};
+  for (const r of filtered) {
+    if (!zoneDayMap[r.date]) zoneDayMap[r.date] = {};
+    const zone =
+      (r as Reservation & { zone?: string }).zone ??
+      (r as Reservation & { tableZone?: string }).tableZone ??
+      noZoneLabel;
+    zoneDayMap[r.date][zone] = (zoneDayMap[r.date][zone] ?? 0) + r.partySize;
+  }
+
+  // Compute total capacity per zone: sum all bookings per zone across all dates
+  // to derive a relative max for percentage calculation
+  const zoneMaxCapacity: Record<string, number> = {};
+  for (const dateZones of Object.values(zoneDayMap)) {
+    for (const [zone, count] of Object.entries(dateZones)) {
+      zoneMaxCapacity[zone] = Math.max(zoneMaxCapacity[zone] ?? 0, count);
+    }
+  }
+
+  const occupancyByZone: ZoneOccupancyPoint[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
     const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-    const dayRes = filtered.filter((r) => r.date === dateStr);
     const point: ZoneOccupancyPoint = { date: label };
-
-    ZONES.forEach((zone, zi) => {
-      // Simulate zone distribution (deterministic but varied)
-      const seed = (d.getDate() * (zi + 1) * 7) % 100;
-      const zoneRes = Math.round((dayRes.length * (20 + (seed % 30))) / 100);
-      const maxCapacity = [40, 25, 15, 10][zi] ?? 20;
-      point[zone] = Math.min(100, Math.round((zoneRes / maxCapacity) * 100));
-    });
-
+    for (const zone of zoneNames) {
+      const booked = zoneDayMap[dateStr]?.[zone] ?? 0;
+      // Use the observed max as the capacity ceiling for percentage calculation
+      const maxCap = zoneMaxCapacity[zone] ?? 1;
+      point[zone] = Math.min(100, Math.round((booked / maxCap) * 100));
+    }
     occupancyByZone.push(point);
   }
 
@@ -194,6 +223,47 @@ function computeAnalytics(
   };
 }
 
+// ── Dynamic zone color palette ────────────────────────────────────────────────
+// LOW-004 fix: Use direct hex colors instead of hsl(var(...)) which is not valid
+// for charting libraries like Recharts that expect CSS color strings.
+// Colors are deterministically derived from zone name via the same deriveZoneColor logic.
+
+const TOKEN_PALETTE = [
+  "#22C55E", // primary green
+  "#3B82F6", // blue
+  "#EAB308", // yellow
+  "#A855F7", // purple
+  "#0EA5E9", // sky
+  "#F97316", // orange
+  "#EC4899", // pink
+  "#14B8A6", // teal
+];
+
+/**
+ * Derive a deterministic chart color from zone name.
+ * Works for any zone name — no hardcoding required.
+ */
+function deriveChartColor(zoneName: string): string {
+  let hash = 0;
+  for (let i = 0; i < zoneName.length; i++) {
+    hash = (hash * 31 + zoneName.charCodeAt(i)) >>> 0;
+  }
+  return TOKEN_PALETTE[hash % TOKEN_PALETTE.length];
+}
+
+export function getZoneColor(zone: string, zoneNames: string[]): string {
+  // First try position-based (for backwards compat), but prefer name-based hash
+  const idx = zoneNames.indexOf(zone);
+  if (idx !== -1) return TOKEN_PALETTE[idx % TOKEN_PALETTE.length];
+  return deriveChartColor(zone);
+}
+
+export function buildZoneColorMap(zoneNames: string[]): Record<string, string> {
+  return Object.fromEntries(
+    zoneNames.map((zone) => [zone, deriveChartColor(zone)]),
+  );
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export interface UseAnalyticsOptions {
@@ -209,7 +279,6 @@ export function useAnalytics({
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  // Use provided reservations — empty array when none available
   const sourceData = useMemo(() => {
     return reservations ?? [];
   }, [reservations]);
@@ -217,6 +286,12 @@ export function useAnalytics({
   const analytics = useMemo(
     () => computeAnalytics(sourceData, range, customStart, customEnd, lang),
     [sourceData, range, customStart, customEnd, lang],
+  );
+
+  // BUG-012: Zone color map derived from dynamic zone list, using CSS tokens
+  const zoneColors = useMemo(
+    () => buildZoneColorMap(analytics.zoneNames),
+    [analytics.zoneNames],
   );
 
   return {
@@ -227,7 +302,7 @@ export function useAnalytics({
     setCustomStart,
     customEnd,
     setCustomEnd,
-    zoneColors: ZONE_COLORS,
+    zoneColors,
     hasData: sourceData.length > 0,
   };
 }

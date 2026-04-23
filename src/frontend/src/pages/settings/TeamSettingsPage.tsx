@@ -24,9 +24,11 @@ import { toast } from "sonner";
 
 // ── Role badge colour map ─────────────────────────────────────────────────────
 const roleBadgeClass: Record<string, string> = {
-  owner: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+  owner:
+    "bg-[oklch(var(--status-orange)/0.15)] text-[oklch(var(--status-orange))] border border-[oklch(var(--status-orange)/0.3)]",
   manager: "bg-primary/15 text-primary border border-primary/30",
-  marketing: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+  marketing:
+    "bg-[oklch(var(--status-blue)/0.15)] text-[oklch(var(--status-blue))] border border-[oklch(var(--status-blue)/0.3)]",
   staff: "bg-muted text-muted-foreground border border-border",
 };
 
@@ -60,14 +62,15 @@ function AddMemberForm() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [principalId, setPrincipalId] = useState("");
   const [role, setRole] = useState<TeamRole>("staff");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !email.trim() || !principalId.trim()) return;
     try {
       await addMember.mutateAsync({
-        principalId: `pending-${Date.now()}`,
+        principalId: principalId.trim(),
         name: name.trim(),
         email: email.trim(),
         role,
@@ -75,6 +78,7 @@ function AddMemberForm() {
       toast.success(t("settings.team.invited", { name: name.trim() }));
       setName("");
       setEmail("");
+      setPrincipalId("");
       setRole("staff");
     } catch {
       toast.error(t("settings.team.inviteError"));
@@ -137,6 +141,29 @@ function AddMemberForm() {
           </div>
         </div>
 
+        {/* Principal ID */}
+        <div className="space-y-2">
+          <Label
+            htmlFor="member-principal"
+            className="text-sm font-medium text-foreground"
+          >
+            {t("settings.team.form.principalId")}
+            <span className="text-destructive ml-1">*</span>
+          </Label>
+          <Input
+            id="member-principal"
+            value={principalId}
+            onChange={(e) => setPrincipalId(e.target.value)}
+            placeholder={t("settings.team.form.principalIdPlaceholder")}
+            className="bg-background border-border font-mono text-xs"
+            required
+            data-ocid="team-member-principal"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("settings.team.form.principalIdHint")}
+          </p>
+        </div>
+
         {/* Role selector */}
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
@@ -164,7 +191,7 @@ function AddMemberForm() {
 
         {/* II note */}
         <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-muted/30 border border-border">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+          <AlertTriangle className="h-4 w-4 text-[oklch(var(--status-orange))] shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
             {t("settings.team.inviteNote")}
           </p>
@@ -173,7 +200,12 @@ function AddMemberForm() {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={!name.trim() || !email.trim() || addMember.isPending}
+            disabled={
+              !name.trim() ||
+              !email.trim() ||
+              !principalId.trim() ||
+              addMember.isPending
+            }
             className="gap-2"
             data-ocid="team-invite-btn"
           >
@@ -421,7 +453,7 @@ export default function TeamSettingsPage() {
       {/* Non-owner read-only notice */}
       {!isOwner && (
         <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-muted/30 border border-border">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+          <AlertTriangle className="h-4 w-4 text-[oklch(var(--status-orange))] shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground">
             {t("settings.team.readOnlyNote")}
           </p>

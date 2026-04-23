@@ -7,8 +7,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const ONBOARDING_KEY = "zenreserve_owner_activated";
-
 type ModalState = "idle" | "loading" | "success" | "error";
 
 interface CopySet {
@@ -66,7 +64,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
     try {
       const principal = identity.getPrincipal();
       await actor.setOwner(principal);
-      localStorage.setItem(ONBOARDING_KEY, "true");
+      // LOW-002: No localStorage write — backend hasOwner() is the sole source of truth
       setModalState("success");
       setTimeout(() => {
         onComplete();

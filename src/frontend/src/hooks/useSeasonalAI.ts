@@ -2,6 +2,7 @@ import { createActor } from "@/backend";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 // ── AI Seating Suggestion Types ───────────────────────────────────────────────
 
@@ -183,13 +184,16 @@ export function useSuggestTable() {
 // ── Hook: record feedback ─────────────────────────────────────────────────────
 
 export function useRecordSuggestionFeedback() {
+  const { actor, isFetching } = useActor(createActor);
   const queryClient = useQueryClient();
+
   const recordFeedback = useCallback(
-    (
+    async (
       suggestionId: string,
       accepted: boolean,
       rejectionReason?: string,
-    ): void => {
+    ): Promise<void> => {
+      // Always update local cache first for instant UI response
       const records = loadFeedback();
       records.push({
         id: suggestionId,
@@ -199,18 +203,56 @@ export function useRecordSuggestionFeedback() {
       });
       saveFeedback(records);
       queryClient.invalidateQueries({ queryKey: ["ai-suggestion-accuracy"] });
+
+      // Persist to backend so the learning loop survives browser clears
+      if (actor && !isFetching) {
+        try {
+          const result = await actor.recordSuggestionFeedback(
+            suggestionId,
+            accepted,
+            rejectionReason ?? null,
+          );
+          if (result.__kind__ === "err") {
+            console.warn("AI feedback backend error:", result.err);
+            // Don't show a toast — local save already succeeded, this is non-critical
+          }
+        } catch (err) {
+          console.warn("AI feedback backend call failed:", err);
+          // Non-critical: local feedback is saved, backend sync failed silently
+        }
+      }
     },
-    [queryClient],
+    [actor, isFetching, queryClient],
   );
+
   return { recordFeedback };
 }
 
 // ── Hook: accuracy stats ──────────────────────────────────────────────────────
 
 export function useSuggestionAccuracyStats(days = 30) {
+  const { actor, isFetching } = useActor(createActor);
+
   return useQuery<SuggestionAccuracyStats>({
     queryKey: ["ai-suggestion-accuracy", days],
-    queryFn: () => {
+    queryFn: async () => {
+      // Try backend first for cross-device accuracy
+      if (actor && !isFetching) {
+        try {
+          const stats = await actor.getSuggestionAccuracyStats(BigInt(days));
+          return {
+            totalSuggestions: Number(stats.totalSuggestions),
+            acceptedCount: Number(stats.acceptedCount),
+            rejectedCount: Number(stats.rejectedCount),
+            acceptanceRatePct: stats.acceptanceRatePct,
+            periodDays: Number(stats.periodDays),
+          };
+        } catch {
+          // Fall through to local calculation
+        }
+      }
+
+      // Fallback: compute from localStorage cache
       const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
       const records = loadFeedback().filter((r) => r.timestamp >= cutoff);
       const total = records.length;
@@ -223,6 +265,7 @@ export function useSuggestionAccuracyStats(days = 30) {
         periodDays: days,
       };
     },
+    enabled: !isFetching,
     staleTime: 30_000,
   });
 }
@@ -239,10 +282,11 @@ export interface SeasonalPeriod {
   autoActivate: boolean;
   activatedZones: string[];
   capacityOverride: number | null;
-  serviceCapacities?: Record<string, number>; // serviceId → override capacity
+  serviceCapacities?: Record<string, number>; // serviceId → override capacity (frontend-only)
 }
 
-export const AVAILABLE_ZONES = [
+/** @deprecated Use dynamic zones from useCapacityConfig() instead. Kept as fallback only. */
+export const FALLBACK_ZONES = [
   "terras",
   "binnenzaal",
   "bar",
@@ -250,38 +294,9 @@ export const AVAILABLE_ZONES = [
   "rooftop",
 ] as const;
 
-export type ZoneKey = (typeof AVAILABLE_ZONES)[number];
-
-// ── localStorage helpers ──────────────────────────────────────────────────────
+// ── localStorage helpers (cache layer) ────────────────────────────────────────
 
 const STORAGE_KEY = "zenreserve_seasonal_periods";
-
-const SEED_PERIODS: SeasonalPeriod[] = [
-  {
-    id: "s1",
-    name: "Zomers terras",
-    dateFrom: "2026-05-01",
-    dateTo: "2026-09-30",
-    description: "Terras open in de zomermaanden",
-    isActive: true,
-    autoActivate: true,
-    activatedZones: ["terras", "rooftop"],
-    capacityOverride: 120,
-    serviceCapacities: { lunch: 50, diner: 80 },
-  },
-  {
-    id: "s2",
-    name: "Kerstvakantie",
-    dateFrom: "2026-12-20",
-    dateTo: "2027-01-05",
-    description: "Beperkte service tijdens de feestdagen",
-    isActive: false,
-    autoActivate: false,
-    activatedZones: ["binnenzaal", "privézaal"],
-    capacityOverride: 60,
-    serviceCapacities: { lunch: 25, diner: 40 },
-  },
-];
 
 function localLoad(): SeasonalPeriod[] {
   try {
@@ -290,7 +305,8 @@ function localLoad(): SeasonalPeriod[] {
   } catch {
     /* ignore */
   }
-  return SEED_PERIODS;
+  // Return empty array — no fake seed data
+  return [];
 }
 
 function localSave(periods: SeasonalPeriod[]): void {
@@ -299,6 +315,48 @@ function localSave(periods: SeasonalPeriod[]): void {
   } catch {
     /* ignore */
   }
+}
+
+// ── Backend ↔ Frontend type mappers ──────────────────────────────────────────
+
+interface BackendSeasonalPeriod {
+  id: string;
+  name: string;
+  dateFrom: string;
+  dateTo: string;
+  isActive: boolean;
+  autoActivate: boolean;
+  activatedZones: string[];
+  capacityOverride?: bigint;
+}
+
+function mapFromBackend(b: BackendSeasonalPeriod): SeasonalPeriod {
+  return {
+    id: b.id,
+    name: b.name,
+    dateFrom: b.dateFrom,
+    dateTo: b.dateTo,
+    isActive: b.isActive,
+    autoActivate: b.autoActivate,
+    activatedZones: b.activatedZones,
+    capacityOverride:
+      b.capacityOverride !== undefined ? Number(b.capacityOverride) : null,
+  };
+}
+
+function mapToBackend(p: SeasonalPeriod): BackendSeasonalPeriod {
+  return {
+    id: p.id,
+    name: p.name,
+    dateFrom: p.dateFrom,
+    dateTo: p.dateTo,
+    isActive: p.isActive,
+    autoActivate: p.autoActivate,
+    activatedZones: p.activatedZones,
+    ...(p.capacityOverride !== null && {
+      capacityOverride: BigInt(p.capacityOverride),
+    }),
+  };
 }
 
 // ── Overlap detection ─────────────────────────────────────────────────────────
@@ -339,19 +397,25 @@ export function getActiveSeasonForDate(
 
 export function useSeasonalPeriods() {
   const { actor, isFetching } = useActor(createActor);
+
   return useQuery<SeasonalPeriod[]>({
     queryKey: ["seasonalPeriods"],
     queryFn: async () => {
-      // Backend seasonal API not yet wired — use localStorage
       if (!actor || isFetching) return localLoad();
+
       try {
-        // Attempt backend call when API becomes available
-        // const periods = await actor.getSeasonalPeriods?.();
-        // if (periods) return periods.map(mapBackendPeriod);
-      } catch {
-        /* fall through to localStorage */
+        const backendPeriods = await actor.getSeasonalPeriods();
+        const mapped = backendPeriods.map((p) =>
+          mapFromBackend(p as BackendSeasonalPeriod),
+        );
+        // Keep local cache in sync
+        localSave(mapped);
+        return mapped;
+      } catch (err) {
+        console.warn("Failed to load seasonal periods from backend:", err);
+        // Fall back to local cache so UI stays functional
+        return localLoad();
       }
-      return localLoad();
     },
     enabled: !isFetching,
     staleTime: 5 * 60 * 1000,
@@ -364,53 +428,99 @@ export function useActiveSeason() {
 }
 
 export function useSaveSeasonalPeriod() {
+  const { actor, isFetching } = useActor(createActor);
   const queryClient = useQueryClient();
+
   return useMutation<
     SeasonalPeriod,
     Error,
     { data: Omit<SeasonalPeriod, "id">; id?: string }
   >({
     mutationFn: async ({ data, id }) => {
-      const current = localLoad();
-      if (id) {
-        const updated = current.map((p) => (p.id === id ? { ...data, id } : p));
-        localSave(updated);
-        return { ...data, id };
+      const period: SeasonalPeriod = id
+        ? { ...data, id }
+        : { ...data, id: `s${Date.now()}` };
+
+      if (actor && !isFetching) {
+        const result = await actor.saveSeasonalPeriod(
+          mapToBackend(period) as Parameters<
+            typeof actor.saveSeasonalPeriod
+          >[0],
+        );
+        if (result.__kind__ === "err") {
+          throw new Error(result.err);
+        }
+      } else {
+        // Offline: update local cache only as fallback
+        const current = localLoad();
+        if (id) {
+          localSave(current.map((p) => (p.id === id ? period : p)));
+        } else {
+          localSave([...current, period]);
+        }
       }
-      const newPeriod: SeasonalPeriod = { ...data, id: `s${Date.now()}` };
-      localSave([...current, newPeriod]);
-      return newPeriod;
+
+      return period;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seasonalPeriods"] });
+    },
+    onError: (err) => {
+      toast.error(`Seizoen opslaan mislukt: ${err.message}`);
     },
   });
 }
 
 export function useDeleteSeasonalPeriod() {
+  const { actor, isFetching } = useActor(createActor);
   const queryClient = useQueryClient();
+
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      const current = localLoad();
-      localSave(current.filter((p) => p.id !== id));
+      if (actor && !isFetching) {
+        const result = await actor.deleteSeasonalPeriod(id);
+        if (result.__kind__ === "err") {
+          throw new Error(result.err);
+        }
+      } else {
+        // Offline fallback
+        const current = localLoad();
+        localSave(current.filter((p) => p.id !== id));
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seasonalPeriods"] });
+    },
+    onError: (err) => {
+      toast.error(`Seizoen verwijderen mislukt: ${err.message}`);
     },
   });
 }
 
 export function useToggleSeasonalPeriod() {
+  const { actor, isFetching } = useActor(createActor);
   const queryClient = useQueryClient();
+
   return useMutation<void, Error, { id: string; active: boolean }>({
     mutationFn: async ({ id, active }) => {
-      const current = localLoad();
-      localSave(
-        current.map((p) => (p.id === id ? { ...p, isActive: active } : p)),
-      );
+      if (actor && !isFetching) {
+        const result = await actor.toggleSeasonalPeriod(id, active);
+        if (result.__kind__ === "err") {
+          throw new Error(result.err);
+        }
+      } else {
+        // Offline fallback
+        const current = localLoad();
+        localSave(
+          current.map((p) => (p.id === id ? { ...p, isActive: active } : p)),
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seasonalPeriods"] });
+    },
+    onError: (err) => {
+      toast.error(`Seizoen activeren mislukt: ${err.message}`);
     },
   });
 }

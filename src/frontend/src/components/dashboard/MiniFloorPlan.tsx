@@ -16,14 +16,14 @@ const OCCUPANCY_BG: Record<
   { bg: string; ring: string; dotColor: string }
 > = {
   empty: {
-    bg: "bg-[#16a34a]/20 hover:bg-[#16a34a]/35",
-    ring: "ring-1 ring-[#22C55E]/50",
-    dotColor: "bg-[#22C55E]/50",
+    bg: "bg-[oklch(var(--color-status-free)/0.15)] hover:bg-[oklch(var(--color-status-free)/0.28)]",
+    ring: "ring-1 ring-[oklch(var(--color-status-free)/0.5)]",
+    dotColor: "bg-[oklch(var(--color-status-free)/0.5)]",
   },
   reserved: {
-    bg: "bg-amber-500/20 hover:bg-amber-500/35",
-    ring: "ring-1 ring-amber-400/50",
-    dotColor: "bg-amber-400/50",
+    bg: "bg-[oklch(var(--color-status-reserved)/0.15)] hover:bg-[oklch(var(--color-status-reserved)/0.28)]",
+    ring: "ring-1 ring-[oklch(var(--color-status-reserved)/0.5)]",
+    dotColor: "bg-[oklch(var(--color-status-reserved)/0.5)]",
   },
   occupied: {
     bg: "bg-destructive/20 hover:bg-destructive/35",

@@ -460,7 +460,9 @@ function EmailPreview({ template }: { template: EmailTemplate }) {
 
       <div
         className="rounded-2xl overflow-hidden border border-border shadow-sm"
-        style={{ backgroundColor: template.backgroundColor || "#faf8f5" }}
+        style={{
+          backgroundColor: template.backgroundColor || "var(--background)",
+        }}
         data-ocid="email-preview"
       >
         <div className="px-4 py-2.5 bg-muted/40 border-b border-border">
@@ -489,13 +491,13 @@ function EmailPreview({ template }: { template: EmailTemplate }) {
 
           <div
             className="h-1 rounded-full mb-5"
-            style={{ backgroundColor: template.accentColor || "#c8a96e" }}
+            style={{ backgroundColor: template.accentColor || "var(--accent)" }}
           />
 
           {heading && (
             <h2
               className="text-xl font-bold mb-4"
-              style={{ color: template.accentColor || "#c8a96e" }}
+              style={{ color: template.accentColor || "var(--accent)" }}
             >
               {heading}
             </h2>
@@ -1065,23 +1067,31 @@ export default function NotificationsSettingsPage() {
   const [notif, setNotif] = useState<NotificationSettings>(
     DEFAULT_NOTIF_SETTINGS,
   );
+  // Saved snapshot for notification settings — isDirty is derived, not manual
+  const [savedNotif, setSavedNotif] = useState<NotificationSettings | null>(
+    null,
+  );
+  // Ref to guard against re-syncing after user has started editing
+  const notifLoadedRef = useRef(false);
   const [localTemplates, setLocalTemplates] = useState<Record<
     TemplateType,
     EmailTemplate
   > | null>(null);
 
-  // Sync backend → local on initial load
+  // Sync backend → local on initial load only (guarded by ref so user edits are safe)
   useEffect(() => {
-    if (remoteNotif && !isNotifDirty) {
-      setNotif({
+    if (remoteNotif && !notifLoadedRef.current) {
+      notifLoadedRef.current = true;
+      const loaded: NotificationSettings = {
         sendConfirmationEmail: remoteNotif.sendConfirmationEmail,
         sendReminderEmail: remoteNotif.sendReminderEmail,
         reminderHoursBefore: remoteNotif.reminderHoursBefore.map(Number),
         sendCancellationEmail: remoteNotif.sendCancellationEmail,
         waitlistAutoActivate: remoteNotif.waitlistAutoActivate,
-      });
+      };
+      setNotif(loaded);
+      setSavedNotif(loaded);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteNotif]);
 
   // ── Review requests state ──────────────────────────────────────────────────
@@ -1093,7 +1103,9 @@ export default function NotificationsSettingsPage() {
     update: updateReview,
     save: saveReview,
   } = useReviewRequests();
-  const [isNotifDirty, setIsNotifDirty] = useState(false);
+  // Derive isDirty from snapshot — never silently reset
+  const isNotifDirty =
+    savedNotif === null || JSON.stringify(notif) !== JSON.stringify(savedNotif);
   const [isSavingNotif, setIsSavingNotif] = useState(false);
   const [activeTab, setActiveTab] = useState<TemplateType>("confirmation");
   const [showApplyAll, setShowApplyAll] = useState(false);
@@ -1113,7 +1125,6 @@ export default function NotificationsSettingsPage() {
       value: NotificationSettings[K],
     ) => {
       setNotif((s) => ({ ...s, [key]: value }));
-      setIsNotifDirty(true);
     },
     [],
   );
@@ -1137,10 +1148,12 @@ export default function NotificationsSettingsPage() {
         sendCancellationEmail: notif.sendCancellationEmail,
         waitlistAutoActivate: notif.waitlistAutoActivate,
       });
-      setIsNotifDirty(false);
+      setSavedNotif(notif);
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[NotificationsSettings] save failed:", err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     } finally {
       setIsSavingNotif(false);
     }
@@ -1200,9 +1213,9 @@ export default function NotificationsSettingsPage() {
         </div>
 
         <div className="px-4 py-3">
-          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-400">
+          <div className="flex items-start gap-3 rounded-xl border border-[oklch(var(--status-orange)/0.3)] bg-[oklch(var(--status-orange)/0.1)] px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-[oklch(var(--status-orange))] shrink-0 mt-0.5" />
+            <p className="text-xs text-[oklch(var(--status-orange))]">
               {t("settings.notifications.emailDisabledNote")}
             </p>
           </div>
@@ -1234,7 +1247,9 @@ export default function NotificationsSettingsPage() {
               description={t("settings.notifications.reminderDesc")}
               checked={notif.sendReminderEmail}
               onCheckedChange={(v) => setNotifField("sendReminderEmail", v)}
-              icon={<Clock className="h-4 w-4 text-amber-400" />}
+              icon={
+                <Clock className="h-4 w-4 text-[oklch(var(--status-orange))]" />
+              }
               ocid="toggle-reminder"
             />
             {notif.sendReminderEmail && (
@@ -1389,9 +1404,9 @@ export default function NotificationsSettingsPage() {
 
         {/* Disabled note */}
         <div className="px-4 py-3">
-          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-400">
+          <div className="flex items-start gap-3 rounded-xl border border-[oklch(var(--status-orange)/0.3)] bg-[oklch(var(--status-orange)/0.1)] px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-[oklch(var(--status-orange))] shrink-0 mt-0.5" />
+            <p className="text-xs text-[oklch(var(--status-orange))]">
               {t("reviewRequests.disabledNote", { ns: "settings" })}
             </p>
           </div>

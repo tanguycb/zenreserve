@@ -150,9 +150,22 @@ export default function ReservationRulesSettingsPage() {
 
   const [config, setConfig] = useState<ReservationRulesConfig>(DEFAULT_RULES);
   const [isSaving, setIsSaving] = useState(false);
+  // noShowFeeEnabled tracks whether the no-show fee is active.
+  // Initialise from data: enabled if noShowFeeEur > 0.
+  const [noShowFeeEnabled, setNoShowFeeEnabled] = useState(
+    DEFAULT_RULES.noShowFeeEur > 0,
+  );
+  // Store the last non-zero amount so toggling back restores it.
+  const [noShowFeeAmount, setNoShowFeeAmount] = useState(
+    DEFAULT_RULES.noShowFeeEur || 15,
+  );
 
   useEffect(() => {
-    if (data) setConfig(data);
+    if (data) {
+      setConfig(data);
+      setNoShowFeeEnabled(data.noShowFeeEur > 0);
+      setNoShowFeeAmount(data.noShowFeeEur > 0 ? data.noShowFeeEur : 15);
+    }
   }, [data]);
 
   const set = <K extends keyof ReservationRulesConfig>(
@@ -160,13 +173,35 @@ export default function ReservationRulesSettingsPage() {
     value: ReservationRulesConfig[K],
   ) => setConfig((c) => ({ ...c, [key]: value }));
 
+  const handleNoShowToggle = (enabled: boolean) => {
+    setNoShowFeeEnabled(enabled);
+    // When enabling, restore last amount; when disabling, keep amount in state
+    // but the effective saved value will be 0.
+    if (enabled && noShowFeeAmount === 0) {
+      setNoShowFeeAmount(15);
+    }
+  };
+
+  const handleNoShowAmountChange = (v: number) => {
+    setNoShowFeeAmount(v);
+  };
+
   const saveAll = async () => {
     setIsSaving(true);
     try {
-      await updateRules.mutateAsync(config);
+      // Compute the effective noShowFeeEur: 0 when disabled.
+      const effectiveConfig: ReservationRulesConfig = {
+        ...config,
+        noShowFeeEur: noShowFeeEnabled ? noShowFeeAmount : 0,
+      };
+      await updateRules.mutateAsync(effectiveConfig);
+      // Sync local config state with what was actually saved.
+      setConfig(effectiveConfig);
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[ReservationRulesSettings] save failed:", err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     } finally {
       setIsSaving(false);
     }
@@ -320,23 +355,45 @@ export default function ReservationRulesSettingsPage() {
             </div>
           )}
 
-          {/* No-show fee */}
-          <NumberField
-            id="noShowFee"
-            label={rr.noShowFee}
-            hint={rr.noShowFeeHint}
-            value={config.noShowFeeEur}
-            min={0}
-            max={500}
-            onChange={(v) => set("noShowFeeEur", v)}
-            suffix="€"
-            ocid="no-show-fee"
-          />
+          {/* No-show fee toggle — matches depositRequired pattern */}
+          <div className="flex items-center justify-between gap-4 py-2 px-4 rounded-xl border border-border bg-background">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {rr.noShowFee}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {rr.noShowFeeHint}
+              </p>
+            </div>
+            <Switch
+              checked={noShowFeeEnabled}
+              onCheckedChange={handleNoShowToggle}
+              data-ocid="no-show-fee-toggle"
+            />
+          </div>
 
-          {config.noShowFeeEur > 0 && (
-            <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-500/90">{rr.noShowFeeNote}</p>
+          {/* Conditional no-show fee amount — only shown when enabled */}
+          {noShowFeeEnabled && (
+            <div className="pl-4 border-l-2 border-primary/30">
+              <NumberField
+                id="noShowFee"
+                label={rr.noShowFeeAmount ?? rr.noShowFee}
+                value={noShowFeeAmount}
+                min={1}
+                max={500}
+                onChange={handleNoShowAmountChange}
+                suffix="€"
+                ocid="no-show-fee-amount"
+              />
+            </div>
+          )}
+
+          {noShowFeeEnabled && noShowFeeAmount > 0 && (
+            <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-[oklch(var(--status-orange)/0.1)] border border-[oklch(var(--status-orange)/0.2)]">
+              <AlertCircle className="h-4 w-4 text-[oklch(var(--status-orange))] mt-0.5 shrink-0" />
+              <p className="text-xs text-[oklch(var(--status-orange)/0.9)]">
+                {rr.noShowFeeNote}
+              </p>
             </div>
           )}
         </div>

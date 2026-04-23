@@ -5,11 +5,17 @@ import AccessControl "mo:caffeineai-authorization/access-control";
 import SeatingLib "../lib/seating";
 import SeatingTypes "../types/seating";
 import CommonTypes "../types/common";
+import ReservationTypes "../types/reservation";
+import SettingsTypes "../types/settings";
 
 mixin (
-  accessControlState : AccessControl.AccessControlState,
-  tables : Map.Map<SeatingTypes.TableId, SeatingTypes.Table>,
-  tableCounter : List.List<Nat>,
+  accessControlState   : AccessControl.AccessControlState,
+  tables               : Map.Map<SeatingTypes.TableId, SeatingTypes.Table>,
+  tableCounter         : List.List<Nat>,
+  tableGroupDefinitions : List.List<SeatingTypes.TableGroupDefinition>,
+  tableGroupDefCounter : List.List<Nat>,
+  reservations         : Map.Map<CommonTypes.ReservationId, ReservationTypes.Reservation>,
+  extendedConfig       : List.List<SettingsTypes.RestaurantExtendedConfig>,
 ) {
   public query func getTables() : async [SeatingTypes.Table] {
     SeatingLib.getTables(tables);
@@ -24,11 +30,12 @@ mixin (
     capacity : Nat,
     x : Int,
     y : Int,
+    zone : ?Text,
   ) : async { #ok : SeatingTypes.Table; #err : Text } {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       return #err("Unauthorized");
     };
-    let table = SeatingLib.createTable(tables, tableCounter, name, capacity, x, y);
+    let table = SeatingLib.createTable(tables, tableCounter, name, capacity, x, y, zone);
     #ok(table);
   };
 
@@ -93,34 +100,39 @@ mixin (
     SeatingLib.setTableStatus(tables, tableId, status);
   };
 
-  /// Find the best available table for the given party size.
-  /// Returns the smallest single table with capacity >= partySize and status == #empty.
-  /// If no single table fits, falls back to finding a matching table group.
-  /// Excludes any table IDs in excludeTableIds.
+  /// Find the best available single table for the given party size, date, and time.
+  /// Uses date-scoped availability — only tables with no conflicting reservation are returned.
   public query func findBestTable(
     partySize : Nat,
+    date      : Text,
+    time      : Text,
     excludeTableIds : [Text],
   ) : async ?SeatingTypes.Table {
-    SeatingLib.findBestTable(tables, partySize, excludeTableIds);
+    SeatingLib.findBestTable(tables, reservations, partySize, date, time, excludeTableIds);
   };
 
-  /// Query alias: find best table for a reservation without excludeList (convenience).
-  public query func findBestTableForReservation(partySize : Nat) : async ?SeatingTypes.Table {
-    SeatingLib.findBestTable(tables, partySize, []);
+  /// Convenience: find best table without exclude list.
+  public query func findBestTableForReservation(
+    partySize : Nat,
+    date      : Text,
+    time      : Text,
+  ) : async ?SeatingTypes.Table {
+    SeatingLib.findBestTable(tables, reservations, partySize, date, time, []);
   };
 
-  /// Auto-assign the best available table (or table group) to a reservation.
-  /// Prefers smallest single table; falls back to a group if partySize exceeds all singles.
-  /// Returns the first assigned table or an error message.
+  /// Auto-assign the best available table (or group) to a reservation.
+  /// Requires date and time for date-scoped conflict detection.
   public shared ({ caller }) func autoAssignTable(
     reservationId : CommonTypes.ReservationId,
     partySize : Nat,
+    date : Text,
+    time : Text,
   ) : async { #ok : SeatingTypes.Table; #err : Text } {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       return #err("Unauthorized");
     };
     // Try single table first
-    switch (SeatingLib.findBestTable(tables, partySize, [])) {
+    switch (SeatingLib.findBestTable(tables, reservations, partySize, date, time, [])) {
       case (?t) {
         switch (SeatingLib.assignReservationToTable(tables, t.id, reservationId, reservationId, partySize)) {
           case (#ok(_)) {
@@ -133,9 +145,8 @@ mixin (
         };
       };
       case null {
-        // Fall back to group
-        switch (SeatingLib.findBestTableGroup(tables, partySize)) {
-          case null { #err("No available table found for party size " # partySize.toText()) };
+        // Try named group definitions
+        switch (SeatingLib.findBestGroupDefinition(tables, reservations, tableGroupDefinitions, partySize, date, time)) {
           case (?(_, groupTables)) {
             if (groupTables.size() == 0) {
               return #err("No available table found for party size " # partySize.toText());
@@ -144,7 +155,24 @@ mixin (
             let firstId = groupTables[0].id;
             switch (tables.get(firstId)) {
               case (?updated) { #ok(updated) };
-              case null { #err("Group assignment failed unexpectedly") };
+              case null { #err("Group definition assignment failed unexpectedly") };
+            };
+          };
+          case null {
+            // Fallback: implicit groupId groups
+            switch (SeatingLib.findBestTableGroup(tables, reservations, partySize, date, time)) {
+              case null { #err("No available table found for party size " # partySize.toText()) };
+              case (?(_, groupTables)) {
+                if (groupTables.size() == 0) {
+                  return #err("No available table found for party size " # partySize.toText());
+                };
+                SeatingLib.assignReservationToGroup(tables, groupTables, reservationId, reservationId, partySize);
+                let firstId = groupTables[0].id;
+                switch (tables.get(firstId)) {
+                  case (?updated) { #ok(updated) };
+                  case null { #err("Group assignment failed unexpectedly") };
+                };
+              };
             };
           };
         };
@@ -152,8 +180,7 @@ mixin (
     };
   };
 
-  /// Group a set of tables by assigning them a shared groupId.
-  /// Tables in a group can be booked together for larger parties.
+  /// Group a set of tables by assigning them a shared groupId (floor-plan visual grouping).
   public shared ({ caller }) func groupTables(
     tableIds : [Text],
     groupId : Text,
@@ -178,5 +205,82 @@ mixin (
       return #err("Unauthorized");
     };
     SeatingLib.ungroupTables(tables, groupId);
+  };
+
+  /// Update the capacity of a single table in place.
+  public shared ({ caller }) func updateTableCapacity(
+    tableId : SeatingTypes.TableId,
+    newCapacity : Nat,
+  ) : async { #ok : SeatingTypes.Table; #err : Text } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      return #err("Unauthorized");
+    };
+    SeatingLib.updateTableCapacity(tables, tableId, newCapacity);
+  };
+
+  /// Update the zone of a single table in place.
+  public shared ({ caller }) func updateTableZone(
+    tableId : SeatingTypes.TableId,
+    zone : ?Text,
+  ) : async { #ok : SeatingTypes.Table; #err : Text } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      return #err("Unauthorized");
+    };
+    SeatingLib.updateTableZone(tables, tableId, zone);
+  };
+
+  /// Sync tables from settings into the floor plan. Admin only.
+  public shared ({ caller }) func syncTablesFromSettings() : async { #ok : Nat; #err : Text } {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      return #err("Unauthorized: admin only");
+    };
+    let count = SeatingLib.syncTablesFromSettings(tables, tableCounter, extendedConfig);
+    #ok(count);
+  };
+
+  // ── Named TableGroupDefinition API ───────────────────────────────────────
+
+  /// List all named table group definitions. Admin only.
+  public query ({ caller }) func getTableGroupDefinitions() : async { #ok : [SeatingTypes.TableGroupDefinition]; #err : Text } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      return #err("Unauthorized");
+    };
+    #ok(SeatingLib.getTableGroupDefinitions(tableGroupDefinitions));
+  };
+
+  /// Create a named table group definition. Admin only.
+  /// tableIds must have at least 2 entries. totalCapacity is auto-calculated.
+  public shared ({ caller }) func createTableGroupDefinition(
+    name        : Text,
+    tableIds    : [Text],
+    description : Text,
+  ) : async { #ok : SeatingTypes.TableGroupDefinition; #err : Text } {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      return #err("Unauthorized: admin only");
+    };
+    SeatingLib.createTableGroupDefinition(tables, tableGroupDefinitions, tableGroupDefCounter, name, tableIds, description);
+  };
+
+  /// Update an existing table group definition. Recalculates totalCapacity. Admin only.
+  public shared ({ caller }) func updateTableGroupDefinition(
+    id          : Text,
+    name        : Text,
+    tableIds    : [Text],
+    description : Text,
+  ) : async { #ok : SeatingTypes.TableGroupDefinition; #err : Text } {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      return #err("Unauthorized: admin only");
+    };
+    SeatingLib.updateTableGroupDefinition(tables, tableGroupDefinitions, id, name, tableIds, description);
+  };
+
+  /// Delete a named table group definition. Admin only.
+  public shared ({ caller }) func deleteTableGroupDefinition(
+    id : Text,
+  ) : async { #ok : (); #err : Text } {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      return #err("Unauthorized: admin only");
+    };
+    SeatingLib.deleteTableGroupDefinition(tableGroupDefinitions, id);
   };
 };

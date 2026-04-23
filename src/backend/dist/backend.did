@@ -3,11 +3,20 @@ type ZoneCapacity =
    maxGuests: nat;
    zoneName: text;
  };
+type Zone = 
+ record {
+   boundaries: opt text;
+   color: text;
+   id: text;
+   maxGuests: nat;
+   name: text;
+ };
 type WaitlistStatus = 
  variant {
    confirmed;
    expired;
    offered;
+   removed_by_staff;
    waiting;
  };
 type WaitlistId = text;
@@ -66,6 +75,14 @@ type TableStatus =
    unavailable;
  };
 type TableId = text;
+type TableGroupDefinition = 
+ record {
+   description: text;
+   id: text;
+   name: text;
+   tableIds: vec text;
+   totalCapacity: nat;
+ };
 type TableAssignment = 
  record {
    assignedAt: Timestamp;
@@ -86,6 +103,7 @@ type Table =
    status: TableStatus;
    x: int;
    y: int;
+   zone: opt text;
  };
 type SuggestionAccuracyStats = 
  record {
@@ -115,6 +133,18 @@ type SeasonalPeriod =
    isActive: bool;
    name: text;
  };
+type ReviewRequestSettings = 
+ record {
+   delay: ReviewRequestDelay;
+   enabled: bool;
+   message: text;
+ };
+type ReviewRequestDelay = 
+ variant {
+   hour1;
+   hour2;
+   hour24;
+ };
 type RestaurantExtendedConfig = 
  record {
    branding: BrandingSettings;
@@ -137,6 +167,7 @@ type RestaurantExtendedConfig =
    tableTypes: vec TableType;
    timezone: text;
    totalSeatsPerSlot: nat;
+   zoneDefs: vec Zone;
    zones: vec ZoneCapacity;
  };
 type ReservationSummary = 
@@ -175,19 +206,36 @@ type ReservationFilter =
    date: opt text;
    guestId: opt GuestId;
    status: opt ReservationStatus;
+   time: opt text;
+ };
+type ReservationChange = 
+ record {
+   changedBy: text;
+   changedByName: text;
+   changedByRole: text;
+   field: text;
+   id: text;
+   newValue: text;
+   oldValue: text;
+   timestamp: int;
  };
 type Reservation = 
  record {
+   changes: vec ReservationChange;
    createdAt: Timestamp;
    date: text;
    experienceId: opt ExperienceId;
    guestId: GuestId;
    id: ReservationId;
+   notes: opt text;
    partySize: nat;
    specialRequests: opt text;
    status: ReservationStatus;
    stripePaymentIntentId: opt text;
+   tableId: opt text;
    time: text;
+   updatedAt: Timestamp;
+   zone: opt text;
  };
 type OccupancySettings = 
  record {
@@ -213,6 +261,7 @@ type KPIs =
                                 nat;
                               };
    todayReservationCount: nat;
+   waitlistCount: nat;
  };
 type IntegrationSettings = 
  record {
@@ -230,6 +279,7 @@ type GuestFormSettings =
    requireAllergies: bool;
    requireDietPreferences: bool;
    requirePhone: bool;
+   showBabiesChildren: bool;
  };
 type Guest = 
  record {
@@ -249,12 +299,28 @@ type FloorState =
 type ExperienceId = text;
 type Experience = 
  record {
+   dayOfWeek: opt vec nat;
    description: text;
    id: ExperienceId;
    isActive: bool;
    maxCapacity: nat;
    name: text;
    pricePerPerson: nat;
+   required: bool;
+   serviceIds: opt vec text;
+ };
+type EmailTemplateType = text;
+type EmailTemplate = 
+ record {
+   accentColor: text;
+   backgroundColor: text;
+   bodyHtml: text;
+   footer: text;
+   heading: text;
+   id: text;
+   logoUrl: text;
+   subject: text;
+   templateType: EmailTemplateType;
  };
 type DayOfWeek = nat;
 type CustomQuestion = 
@@ -283,6 +349,24 @@ type BrandingSettings =
    primaryColor: text;
    welcomeText: text;
  };
+type AvailableSlotsResponse = 
+ record {
+   fixedClosingDays: vec nat;
+   slots: vec TimeSlot;
+ };
+type AuditLogEntry = 
+ record {
+   action: text;
+   callerName: text;
+   callerPrincipal: text;
+   callerRole: text;
+   id: text;
+   newValue: opt text;
+   oldValue: opt text;
+   page: text;
+   summary: text;
+   timestamp: int;
+ };
 type AISeatingSuggestion = 
  record {
    confidence: float64;
@@ -302,7 +386,21 @@ service : {
       ok: TeamMember;
     });
   addToWaitlist: (guestId: GuestId, date: text, partySize: nat,
-   requestedTime: opt text, notes: opt text) -> (WaitlistEntry);
+   requestedTime: opt text, notes: opt text) ->
+   (variant {
+      err: text;
+      ok: WaitlistEntry;
+    });
+  addZone: (name: text, color: text, maxGuests: nat) ->
+   (variant {
+      err: text;
+      ok: Zone;
+    });
+  applyHouseStyleToAll: (accentColor: text, backgroundColor: text, logoUrl:
+   text) -> (variant {
+               err: text;
+               ok;
+             });
   askAI: (prompt: text, context: text) -> (variant {
                                              err: text;
                                              ok: text;
@@ -319,29 +417,36 @@ service : {
       err: text;
       ok: TableAssignment;
     });
-  autoAssignTable: (reservationId: ReservationId, partySize: nat) ->
-   (variant {
-      err: text;
-      ok: Table;
-    });
+  autoAssignTable: (reservationId: ReservationId, partySize: nat, date: 
+   text, time: text) -> (variant {
+                           err: text;
+                           ok: Table;
+                         });
   cancelReservation: (id: ReservationId) -> ();
   createExperience: (name: text, description: text, pricePerPerson: nat,
-   maxCapacity: nat) -> (Experience);
+   maxCapacity: nat, required: bool, serviceIds: opt vec text, dayOfWeek:
+   opt vec nat) -> (Experience);
   createGuest: (name: text, email: text, phone: opt text) -> (Guest);
   createReservation: (guestId: GuestId, date: text, time: text, partySize:
    nat, experienceId: opt ExperienceId, stripePaymentIntentId: opt text,
    specialRequests: opt text) -> (Reservation);
   createReservationWithDetails: (guestName: text, phone: text, email: 
    text, partySize: nat, date: text, timeSlot: text, tableId: opt text,
-   notes: opt text) -> (variant {
-                          err: text;
-                          ok: Reservation;
-                        });
-  createTable: (name: text, capacity: nat, x: int, y: int) ->
+   notes: opt text, experienceId: opt ExperienceId) ->
+   (variant {
+      err: text;
+      ok: Reservation;
+    });
+  createTable: (name: text, capacity: nat, x: int, y: int, zone: opt text) ->
    (variant {
       err: text;
       ok: Table;
     });
+  createTableGroupDefinition: (name: text, tableIds: vec text, description:
+   text) -> (variant {
+               err: text;
+               ok: TableGroupDefinition;
+             });
   deleteSeasonalPeriod: (id: text) -> (variant {
                                          err: text;
                                          ok;
@@ -350,9 +455,18 @@ service : {
                                    err: text;
                                    ok;
                                  });
-  findBestTable: (partySize: nat, excludeTableIds: vec text) ->
+  deleteTableGroupDefinition: (id: text) -> (variant {
+                                               err: text;
+                                               ok;
+                                             });
+  deleteZone: (id: text) -> (variant {
+                               err: text;
+                               ok: bool;
+                             });
+  findBestTable: (partySize: nat, date: text, time: text, excludeTableIds:
+   vec text) -> (opt Table) query;
+  findBestTableForReservation: (partySize: nat, date: text, time: text) ->
    (opt Table) query;
-  findBestTableForReservation: (partySize: nat) -> (opt Table) query;
   getAISuggestions: (guestId: opt GuestId, reservationContext: text) ->
    (variant {
       err: text;
@@ -360,13 +474,35 @@ service : {
     });
   getActiveSeason: (date: text) -> (opt SeasonalPeriod) query;
   getActiveZonesForDate: (date: text) -> (vec text) query;
-  getAvailableSlots: (date: text) -> (vec TimeSlot) query;
+  getAuditLog: () -> (variant {
+                        err: text;
+                        ok: vec AuditLogEntry;
+                      }) query;
+  getAuditLogPaginated: (offset: nat, limit: nat) ->
+   (variant {
+      err: text;
+      ok: record {
+            entries: vec AuditLogEntry;
+            total: nat;
+          };
+    }) query;
+  getAvailableSlots: (date: text) -> (AvailableSlotsResponse) query;
   getCallerUserRole: () -> (UserRole) query;
-  getExtendedConfig: () -> (RestaurantExtendedConfig) query;
+  getEmailTemplates: () -> (vec EmailTemplate) query;
+  getExtendedConfig: () ->
+   (variant {
+      err: text;
+      ok: RestaurantExtendedConfig;
+    }) query;
   getFloorState: () -> (FloorState) query;
   getGuest: (id: GuestId) -> (opt Guest) query;
   getKPIs: () -> (KPIs) query;
   getReservation: (id: ReservationId) -> (opt Reservation) query;
+  getReservationChanges: (id: ReservationId) ->
+   (variant {
+      err: text;
+      ok: vec ReservationChange;
+    }) query;
   getRestaurantConfig: () ->
    (record {
       closingHour: nat;
@@ -375,11 +511,21 @@ service : {
       slotIntervalMinutes: nat;
       totalSeatsPerSlot: nat;
     }) query;
+  getReviewRequestSettings: () -> (ReviewRequestSettings) query;
   getSeasonalPeriods: () -> (vec SeasonalPeriod) query;
   getSuggestionAccuracyStats: (days: nat) -> (SuggestionAccuracyStats) query;
+  getTableGroupDefinitions: () ->
+   (variant {
+      err: text;
+      ok: vec TableGroupDefinition;
+    }) query;
   getTables: () -> (vec Table) query;
   getWaitlist: (date: text) -> (vec WaitlistEntry) query;
   getWaitlistEntry: (id: WaitlistId) -> (opt WaitlistEntry) query;
+  getZones: () -> (variant {
+                     err: text;
+                     ok: vec Zone;
+                   }) query;
   groupTables: (tableIds: vec text, groupId: text) ->
    (variant {
       err: text;
@@ -387,12 +533,23 @@ service : {
     });
   hasOwner: () -> (bool) query;
   isCallerAdmin: () -> (bool) query;
-  listActiveExperiences: () -> (vec Experience) query;
+  listActiveExperiences: (serviceFilter: opt text, dayFilter: opt nat) ->
+   (vec Experience) query;
   listExperiences: () -> (vec Experience) query;
   listGuests: () -> (vec Guest) query;
-  listReservations: (filter: ReservationFilter) -> (vec Reservation) query;
+  listReservations: (filter: ReservationFilter) ->
+   (variant {
+      err: text;
+      ok: vec Reservation;
+    }) query;
   listTeamMembers: () -> (vec TeamMember) query;
+  logAuditEntry: (callerText: text, page: text, action: text, summary: 
+   text, oldValue: opt text, newValue: opt text) -> () oneway;
   offerWaitlistSpot: (id: WaitlistId) -> ();
+  recordReviewRequestSent: (reservationId: text) -> (variant {
+                                                       err: text;
+                                                       ok;
+                                                     });
   recordSuggestionFeedback: (suggestionId: text, accepted: bool,
    rejectionReason: opt text) -> (variant {
                                     err: text;
@@ -411,23 +568,51 @@ service : {
       err: text;
       ok: WaitlistEntry;
     });
+  resetEmailTemplate: (templateType: EmailTemplateType) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  saveEmailTemplate: (template: EmailTemplate) -> (variant {
+                                                     err: text;
+                                                     ok;
+                                                   });
+  saveEmailTemplates: (templates: vec EmailTemplate) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  saveReviewRequestSettings: (enabled: bool, delay: ReviewRequestDelay,
+   message: text) -> (variant {
+                        err: text;
+                        ok;
+                      });
   saveSeasonalPeriod: (period: SeasonalPeriod) -> (variant {
                                                      err: text;
                                                      ok;
                                                    });
-  searchGuests: (searchQuery: text) -> (vec Guest) query;
+  searchGuests: (searchQuery: text, limit: nat, offset: nat) ->
+   (record {
+      guests: vec Guest;
+      total: nat;
+    }) query;
   setOwner: (owner: principal) -> ();
   setTableStatus: (tableId: TableId, status: TableStatus) ->
    (variant {
       err: text;
       ok: Table;
     });
+  shouldSendReviewRequest: (reservationId: text) -> (bool) query;
   suggestTable: (partySize: nat, zonePreference: opt text, date: text, time:
    text, existingReservations: vec ReservationSummary) ->
    (variant {
       err: text;
       ok: AISeatingSuggestion;
     });
+  syncTablesFromSettings: () -> (variant {
+                                   err: text;
+                                   ok: nat;
+                                 });
   toggleSeasonalPeriod: (id: text, active: bool) -> (variant {
                                                        err: text;
                                                        ok;
@@ -479,8 +664,10 @@ service : {
       err: text;
       ok;
     });
-  updateReservation: (id: ReservationId, date: text, time: text, partySize:
-   nat, specialRequests: opt text) -> (variant {
+  updateReservation: (id: ReservationId, newDate: text, newTime: text,
+   newPartySize: nat, newSpecialRequests: opt text, newStatus:
+   opt ReservationStatus, newExperienceId: opt ExperienceId, newNotes:
+   opt text, newTableId: opt text) -> (variant {
                                          err: text;
                                          ok: Reservation;
                                        });
@@ -498,7 +685,22 @@ service : {
       err: text;
       ok;
     });
+  updateTableCapacity: (tableId: TableId, newCapacity: nat) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  updateTableGroupDefinition: (id: text, name: text, tableIds: vec text,
+   description: text) -> (variant {
+                            err: text;
+                            ok: TableGroupDefinition;
+                          });
   updateTablePosition: (id: TableId, x: int, y: int) ->
+   (variant {
+      err: text;
+      ok: Table;
+    });
+  updateTableZone: (tableId: TableId, zone: opt text) ->
    (variant {
       err: text;
       ok: Table;
@@ -512,5 +714,15 @@ service : {
    (variant {
       err: text;
       ok: WaitlistEntry;
+    });
+  updateZone: (id: text, name: text, color: text, maxGuests: nat) ->
+   (variant {
+      err: text;
+      ok: Zone;
+    });
+  updateZoneBoundaries: (id: text, boundaries: text) ->
+   (variant {
+      err: text;
+      ok: bool;
     });
 }

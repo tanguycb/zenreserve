@@ -79,3 +79,17 @@ ZenReserve is a premium restaurant reservation platform combining zen aesthetics
 - **Ban**: Cold flat surfaces, generic UI, weak contrast, narrow touch targets, slow/sluggish animations, inconsistent spacing, "plat black" without depth
 - **Enforce**: Gradient cards on ALL surfaces (except headers), 12-16px radius everywhere, soft shadows by default, 44px buttons, generous py-3/px-6 padding, green focus-rings, bold headings (h1 32-36px, h2 24px), status always color+icon
 - **Theme**: Premium, warm, minimalist, operational-precise. Table plan feels like organized workspace not clinical tool. Dashboard KPIs scannable at a glance. Time-grid familiar like Google Calendar but with restaurant-specific colors. Micro-animations delight without distraction.
+
+## Floor Plan / Tafelplan Visual System
+- **Canvas background**: Navy #0F172A with fine grid-line overlay (#334155 @ 8% opacity, 20px cells) for reference alignment
+- **Table shapes**: Rectangular tables drawn to scale (width/height proportional to capacity); round tables as perfect circles; size increases with seat count
+- **Chair placement**: Exact chair count per table, positioned around perimeter; small chair icons (10–14px) using `--chair-foreground` color; equidistant spacing on rectangles (opposite corners), radial on circles
+- **Table dressing**: Minimal visual details (subtle placemat outline, glassware silhouette, utensil accent line) rendered at low opacity — suggests elegance without clutter
+- **Status glow**: Color-coded soft glow rings on table + chairs (green/.table-glow-free, orange/.table-glow-reserved, red/.table-glow-occupied, grey/.table-glow-unavailable); glow opacity `--glow-opacity` 0.18; composite shadow: 16px color spread + 4px black depth shadow
+- **Table labels**: Compact badge above/beside table: "Tafel 1 • 4 pers • BESCHIKBAAR" in text-xs; status color matches table glow
+- **Toolbar**: Fixed at top — "AI Suggestion" (primary green), "Manage Zones" (secondary), "Add Table" (primary green), "Upload Background" (muted), "Print Floor Plan" (muted); all 44px height, 12px radius
+- **Zone tabs**: Horizontal below toolbar; "All Zones / Terras / Bar / Rooftop / Privézaal" with subtle underline tint matching zone color; active tab green underline
+- **Desktop**: Drag-and-drop with snap-to-grid (20px), undo button (icon + label), rotate option (15° increments); drag shadow lift to shadow-drag; cursor grab/grabbing
+- **Mobile**: Tap table → full-screen modal: name, capacity, zone dropdown, notes textarea, status selector (available/reserved/occupied/unavailable), save/cancel; smooth slide-up animation
+- **Hover/focus**: Table selected state uses shadow-elevated + slight scale(1.02); focus-ring-primary on keyboard navigation; status ring strengthens on hover
+- **Motion**: transition-smooth (0.3s) on all table state changes, status updates; suggestion-slide-in (0.4s bounce) for AI layout recommendations; respect prefers-reduced-motion

@@ -12,6 +12,7 @@
     "loading": "Loading dates...",
     "available": "Available",
     "fullyBooked": "Fully booked",
+    "closed": "Closed",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "weekdays": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
@@ -41,7 +42,10 @@
     "allFullSub": "All time slots on this date are taken.",
     "waitlistCta": "Join the waitlist",
     "places": "pl.",
-    "slots": "Available time slots"
+    "slots": "Available time slots",
+    "closed": "Closed",
+    "noSlots": "No time slots available",
+    "noSlotsSub": "Choose a different date or join the waitlist."
   },
   "partySizeStep": {
     "title": "Number of guests",
@@ -57,6 +61,7 @@
   "experienceStep": {
     "title": "Add an experience",
     "optional": "(optional)",
+    "required": "Required",
     "loading": "Loading experiences...",
     "noPreference": "No preference",
     "noPreferenceSub": "Just a wonderful evening à la carte",
@@ -64,7 +69,8 @@
     "skip": "No experience",
     "tagMenu": "Menu",
     "tagEvent": "Event",
-    "tagSpecial": "Special"
+    "tagSpecial": "Special",
+    "noExperiences": "No experiences available"
   },
   "detailsStep": {
     "title": "Your details",
@@ -103,6 +109,7 @@
     "successTitle": "Payment successful!",
     "successSub": "Deposit of {{amount}} processed.",
     "errorDefault": "Payment failed. Please check your card details and try again.",
+    "errorRateLimit": "Too many reservation attempts. Please try again in an hour.",
     "secureNote": "256-bit SSL · Powered by Stripe · PCI-DSS compliant"
   },
   "confirmationStep": {

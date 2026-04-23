@@ -17,7 +17,8 @@
     "availability": "Beschikbaarheid",
     "about": "Over ons",
     "openingHours": "Openingstijden",
-    "location": "Locatie"
+    "location": "Locatie",
+    "closed": "Gesloten"
   },
   "booking": {
     "selectedDate": "Geselecteerde datum",
@@ -25,5 +26,22 @@
     "partySize": "Gezelschap",
     "continueBooking": "Doorgaan met reserveren",
     "backToSearch": "Terug naar zoeken"
+  },
+  "availability": {
+    "full": "Vol",
+    "limited": "Beperkt",
+    "free": "Vrij"
+  },
+  "days": {
+    "monday": "Maandag",
+    "tuesday": "Dinsdag",
+    "wednesday": "Woensdag",
+    "thursday": "Donderdag",
+    "friday": "Vrijdag",
+    "saturday": "Zaterdag",
+    "sunday": "Zondag"
+  },
+  "footer": {
+    "poweredBy": "Mogelijk gemaakt door"
   }
 }

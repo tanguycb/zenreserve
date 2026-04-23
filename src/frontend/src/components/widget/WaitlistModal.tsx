@@ -1,5 +1,6 @@
+import { useAddToWaitlist } from "@/hooks/useDashboard";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Clock, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +27,7 @@ const TIME_OPTIONS = [
 export function WaitlistModal({
   isOpen,
   onClose,
+  selectedDate,
   partySize,
 }: WaitlistModalProps) {
   const { t } = useTranslation(["widget", "shared"]);
@@ -34,17 +36,28 @@ export function WaitlistModal({
   const [phone, setPhone] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [size, setSize] = useState(partySize ?? 2);
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
+  const addToWaitlist = useAddToWaitlist();
+
+  // Focus first input on open
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => firstInputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
-  // Trap focus inside modal
+  // Reset form state when modal re-opens
+  const resetMutation = addToWaitlist.reset;
+  useEffect(() => {
+    if (isOpen) {
+      setSuccess(false);
+      resetMutation();
+    }
+  }, [isOpen, resetMutation]);
+
+  // Escape key to close
   useEffect(() => {
     if (!isOpen) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -57,10 +70,26 @@ export function WaitlistModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !email) return;
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setSuccess(true);
-    setLoading(false);
+
+    const date = selectedDate ?? new Date().toISOString().split("T")[0];
+
+    await addToWaitlist.mutateAsync(
+      {
+        guestName: name,
+        guestEmail: email,
+        guestPhone: phone || undefined,
+        partySize: size,
+        date,
+        requestedTime: preferredTime || undefined,
+        notes: "",
+      },
+      {
+        onSuccess: () => {
+          setSuccess(true);
+          setTimeout(onClose, 2200);
+        },
+      },
+    );
   }
 
   if (!isOpen) return null;
@@ -121,7 +150,7 @@ export function WaitlistModal({
             aria-label={t("shared:actions.close")}
             className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-black/5"
             style={{ color: "#6B7280" }}
-            data-ocid="waitlist-close-btn"
+            data-ocid="waitlist.close_button"
           >
             <X className="h-4 w-4" />
           </button>
@@ -129,7 +158,10 @@ export function WaitlistModal({
 
         <div className="px-5 py-5">
           {success ? (
-            <div className="text-center py-6 space-y-4">
+            <div
+              className="text-center py-6 space-y-4"
+              data-ocid="waitlist.success_state"
+            >
               <div
                 className="mx-auto h-16 w-16 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: "#22C55E1A" }}
@@ -152,7 +184,7 @@ export function WaitlistModal({
                 onClick={onClose}
                 className="px-8 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
                 style={{ backgroundColor: "#22C55E", color: "#FFFFFF" }}
-                data-ocid="waitlist-done-btn"
+                data-ocid="waitlist.close_button"
               >
                 {t("shared:actions.close")}
               </button>
@@ -177,7 +209,7 @@ export function WaitlistModal({
                   placeholder="Jan Jansen"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  data-ocid="waitlist-input-name"
+                  data-ocid="waitlist.input"
                 />
               </div>
 
@@ -198,7 +230,7 @@ export function WaitlistModal({
                   placeholder={t("widget:detailsStep.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  data-ocid="waitlist-input-email"
+                  data-ocid="waitlist.input"
                 />
               </div>
 
@@ -218,7 +250,7 @@ export function WaitlistModal({
                   placeholder={t("widget:detailsStep.phonePlaceholder")}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  data-ocid="waitlist-input-phone"
+                  data-ocid="waitlist.input"
                 />
               </div>
 
@@ -240,7 +272,7 @@ export function WaitlistModal({
                     }}
                     value={preferredTime}
                     onChange={(e) => setPreferredTime(e.target.value)}
-                    data-ocid="waitlist-select-time"
+                    data-ocid="waitlist.select"
                   >
                     <option value="">
                       {t("widget:experienceStep.noPreference")}
@@ -267,7 +299,7 @@ export function WaitlistModal({
                     style={{ borderColor: "#E2E8F0", color: "#1F2937" }}
                     value={size}
                     onChange={(e) => setSize(Number(e.target.value))}
-                    data-ocid="waitlist-select-size"
+                    data-ocid="waitlist.select"
                   >
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
@@ -278,30 +310,55 @@ export function WaitlistModal({
                 </div>
               </div>
 
+              {/* Error state */}
+              {addToWaitlist.isError && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-xl"
+                  style={{ backgroundColor: "#FEF2F2" }}
+                  role="alert"
+                  data-ocid="waitlist.error_state"
+                >
+                  <AlertCircle
+                    className="h-4 w-4 flex-shrink-0 mt-0.5"
+                    style={{ color: "#EF4444" }}
+                  />
+                  <p className="text-sm" style={{ color: "#EF4444" }}>
+                    {addToWaitlist.error?.message ??
+                      t("shared:errors.genericError")}
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={onClose}
                   className="flex-1 py-3 rounded-xl border font-medium text-sm transition-all hover:bg-black/5"
                   style={{ borderColor: "#E2E8F0", color: "#6B7280" }}
+                  data-ocid="waitlist.cancel_button"
                 >
                   {t("shared:actions.cancel")}
                 </button>
                 <button
                   type="submit"
-                  disabled={!name || !email || loading}
+                  disabled={!name || !email || addToWaitlist.isPending}
                   className={cn(
-                    "flex-1 py-3 rounded-xl font-bold text-sm transition-all",
-                    name && email && !loading
+                    "flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
+                    name && email && !addToWaitlist.isPending
                       ? "hover:opacity-90 active:scale-[0.98]"
                       : "opacity-50 cursor-not-allowed",
                   )}
                   style={{ backgroundColor: "#3B82F6", color: "#FFFFFF" }}
-                  data-ocid="waitlist-submit-btn"
+                  data-ocid="waitlist.submit_button"
                 >
-                  {loading
-                    ? t("shared:actions.loading")
-                    : t("widget:waitlist.joinButton")}
+                  {addToWaitlist.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t("shared:actions.loading")}
+                    </>
+                  ) : (
+                    t("widget:waitlist.joinButton")
+                  )}
                 </button>
               </div>
             </form>

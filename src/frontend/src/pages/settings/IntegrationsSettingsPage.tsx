@@ -1,8 +1,12 @@
+import type { IntegrationSettings as BackendIntegration } from "@/backend.d.ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  useIntegrationSettings,
+  useUpdateIntegrationSettings,
+} from "@/hooks/useSettings";
 import {
   AlertTriangle,
   Calendar,
@@ -31,42 +35,57 @@ interface IntegrationsConfig {
   apiKey: string;
 }
 
-// ── Persistence ────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "zenreserve_integrations";
-
-function loadConfig(): IntegrationsConfig {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as IntegrationsConfig;
-  } catch {
-    // ignore
-  }
-  return {
-    stripeEnabled: false,
-    stripePublicKey: "",
-    mollieEnabled: false,
-    posSystem: "none",
-    customPosName: "",
-    calendarSyncEnabled: false,
-    apiKey: generateUUID(),
-  };
-}
-
-function saveConfig(config: IntegrationsConfig): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  } catch {
-    // ignore
-  }
-}
-
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}
+
+const DEFAULT_CONFIG: IntegrationsConfig = {
+  stripeEnabled: false,
+  stripePublicKey: "",
+  mollieEnabled: false,
+  posSystem: "none",
+  customPosName: "",
+  calendarSyncEnabled: false,
+  apiKey: "",
+};
+
+function backendToConfig(b: BackendIntegration): IntegrationsConfig {
+  const posRaw = b.posSystem ?? "none";
+  const knownPos = ["none", "lightspeed", "square", "toast", "custom"];
+  const posSystem = knownPos.includes(posRaw)
+    ? (posRaw as PosSystem)
+    : "custom";
+  const customPosName = !knownPos.includes(posRaw) ? posRaw : "";
+  return {
+    stripeEnabled: b.stripeEnabled,
+    stripePublicKey: b.stripePublicKey,
+    mollieEnabled: b.mollieEnabled,
+    calendarSyncEnabled: b.calendarSyncEnabled,
+    apiKey: b.apiKey || generateUUID(),
+    posSystem,
+    customPosName,
+  };
+}
+
+function configToBackend(c: IntegrationsConfig): BackendIntegration {
+  const posValue =
+    c.posSystem === "custom" && c.customPosName
+      ? c.customPosName
+      : c.posSystem === "none"
+        ? undefined
+        : c.posSystem;
+  return {
+    stripeEnabled: c.stripeEnabled,
+    stripePublicKey: c.stripePublicKey,
+    mollieEnabled: c.mollieEnabled,
+    calendarSyncEnabled: c.calendarSyncEnabled,
+    apiKey: c.apiKey,
+    posSystem: posValue,
+  };
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -107,6 +126,7 @@ function SectionCard({
           onClick={onSave}
           disabled={saving}
           className="gap-2"
+          data-ocid="integrations-save-btn"
         >
           {saving ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -170,14 +190,17 @@ const POS_OPTIONS: { value: PosSystem; label: string }[] = [
 
 export default function IntegrationsSettingsPage() {
   const { t } = useTranslation("dashboard");
-  const queryClient = useQueryClient();
-  const [config, setConfig] = useState<IntegrationsConfig>(loadConfig);
-  const [saving, setSaving] = useState(false);
+  const { data: backendConfig, isLoading } = useIntegrationSettings();
+  const updateMutation = useUpdateIntegrationSettings();
 
-  // Keep config in sync if storage was updated elsewhere
+  const [config, setConfig] = useState<IntegrationsConfig>(DEFAULT_CONFIG);
+
+  // Populate form from backend on load
   useEffect(() => {
-    setConfig(loadConfig());
-  }, []);
+    if (backendConfig) {
+      setConfig(backendToConfig(backendConfig));
+    }
+  }, [backendConfig]);
 
   const set = <K extends keyof IntegrationsConfig>(
     key: K,
@@ -187,23 +210,37 @@ export default function IntegrationsSettingsPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    saveConfig(config);
-    queryClient.invalidateQueries({ queryKey: ["integrationsConfig"] });
-    await new Promise((r) => setTimeout(r, 400));
-    setSaving(false);
-    toast.success(t("settings.saved"));
+    try {
+      await updateMutation.mutateAsync(configToBackend(config));
+      toast.success(t("settings.saved"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("settings.saveError"));
+    }
   };
 
   const handleRegenerateApiKey = () => {
     const newKey = generateUUID();
     set("apiKey", newKey);
-    const updated = { ...config, apiKey: newKey };
-    saveConfig(updated);
+    // Immediately persist the new key to backend
+    updateMutation.mutate(configToBackend({ ...config, apiKey: newKey }));
     toast.success(t("settings.integrations.apiKeyRegenerated"));
   };
 
+  const saving = updateMutation.isPending;
   const bothPaymentsActive = config.stripeEnabled && config.mollieEnabled;
+
+  if (isLoading) {
+    return (
+      <div
+        className="max-w-2xl space-y-8"
+        data-ocid="integrations-settings-page"
+      >
+        <div className="h-10 w-48 rounded-xl bg-muted/40 animate-pulse" />
+        <div className="rounded-2xl border border-border bg-card h-48 animate-pulse" />
+        <div className="rounded-2xl border border-border bg-card h-32 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl space-y-8" data-ocid="integrations-settings-page">
@@ -277,12 +314,12 @@ export default function IntegrationsSettingsPage() {
         {/* Warning: both enabled */}
         {bothPaymentsActive && (
           <div
-            className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+            className="flex items-start gap-2.5 rounded-xl border border-[oklch(var(--status-orange)/0.3)] bg-[oklch(var(--status-orange)/0.1)] px-4 py-3"
             role="alert"
             data-ocid="both-payments-warning"
           >
-            <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-300">
+            <AlertTriangle className="h-4 w-4 text-[oklch(var(--status-orange))] mt-0.5 shrink-0" />
+            <p className="text-xs text-[oklch(var(--status-orange)/0.9)]">
               {t("settings.integrations.payments.bothEnabledWarning")}
             </p>
           </div>
@@ -455,6 +492,7 @@ export default function IntegrationsSettingsPage() {
               type="button"
               variant="outline"
               onClick={handleRegenerateApiKey}
+              disabled={saving}
               className="shrink-0 gap-2 border-border"
               data-ocid="regenerate-api-key-btn"
             >

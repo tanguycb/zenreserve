@@ -72,8 +72,7 @@ function WidgetPreview({
   const { t } = useTranslation("dashboard");
   return (
     <div
-      className="rounded-xl border border-border overflow-hidden shadow-md w-full"
-      style={{ background: "#FAF7F0" }}
+      className="rounded-xl border border-border overflow-hidden shadow-md w-full bg-background"
       aria-label={t("settings.branding.previewAriaLabel")}
       data-ocid="branding-widget-preview"
     >
@@ -85,16 +84,13 @@ function WidgetPreview({
           <img
             src={logoUrl}
             alt="logo"
-            className="h-7 w-7 rounded-md object-contain bg-white/20"
+            className="h-7 w-7 rounded-md object-contain bg-muted/30"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
         ) : (
-          <div
-            className="h-7 w-7 rounded-md flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: "rgba(255,255,255,0.25)" }}
-          >
+          <div className="h-7 w-7 rounded-md flex items-center justify-center text-white text-xs font-bold bg-[oklch(var(--primary)/0.25)]">
             Z
           </div>
         )}
@@ -103,23 +99,22 @@ function WidgetPreview({
         </span>
       </div>
       <div className="px-4 py-3 space-y-2">
-        <p className="text-xs font-medium" style={{ color: "#1F2937" }}>
+        <p className="text-xs font-medium text-foreground">
           {t("settings.branding.previewSelectDate")}
         </p>
         <div className="flex gap-1.5 flex-wrap">
           {["Vr 12", "Za 13", "Zo 14", "Ma 15"].map((day, i) => (
             <div
               key={day}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium"
               style={
                 i === 1
                   ? { background: primaryColor, color: "#fff" }
-                  : {
-                      background: "#F3F4F6",
-                      color: "#1F2937",
-                      border: "1px solid #E2E8F0",
-                    }
+                  : undefined
               }
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-medium",
+                i !== 1 && "bg-muted text-foreground border border-border",
+              )}
             >
               {day}
             </div>
@@ -129,16 +124,13 @@ function WidgetPreview({
           {["12:00", "12:30", "19:00", "20:00"].map((slot, i) => (
             <div
               key={slot}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium"
               style={
-                i === 2
-                  ? { background: accentColor, color: "#fff" }
-                  : {
-                      background: "#F3F4F6",
-                      color: "#1F2937",
-                      border: "1px solid #E2E8F0",
-                    }
+                i === 2 ? { background: accentColor, color: "#fff" } : undefined
               }
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-medium",
+                i !== 2 && "bg-muted text-foreground border border-border",
+              )}
             >
               {slot}
             </div>
@@ -254,14 +246,15 @@ export default function BrandingSettingsPage() {
     sendReminderEmail: true,
     reminderHoursBefore: 24,
   });
-  const [isDirty, setIsDirty] = useState(false);
+  // saved snapshot — isDirty is derived from comparison, never manually managed
+  const [saved, setSaved] = useState<BrandingConfig | null>(null);
   const [darkMode, setDarkMode] = useState<"dark" | "light">(loadTheme);
   const [logoPreviewSrc, setLogoPreviewSrc] = useState("");
 
   useEffect(() => {
     if (data) {
       setForm(data);
-      setIsDirty(false);
+      setSaved(data);
     }
   }, [data]);
 
@@ -269,12 +262,15 @@ export default function BrandingSettingsPage() {
     setLogoPreviewSrc(form.logoUrl);
   }, [form.logoUrl]);
 
+  // Derive isDirty from snapshot — never reset by useEffect on data arrival
+  const isDirty =
+    saved === null || JSON.stringify(form) !== JSON.stringify(saved);
+
   const set = <K extends keyof BrandingConfig>(
     key: K,
     value: BrandingConfig[K],
   ) => {
     setForm((f) => ({ ...f, [key]: value }));
-    setIsDirty(true);
   };
 
   const handleThemeToggle = (checked: boolean) => {
@@ -299,10 +295,12 @@ export default function BrandingSettingsPage() {
     e.preventDefault();
     try {
       await updateMutation.mutateAsync(form);
-      setIsDirty(false);
+      setSaved(form);
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[BrandingSettings] save failed:", err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     }
   };
 
@@ -380,7 +378,7 @@ export default function BrandingSettingsPage() {
                 className={cn(
                   "h-12 w-12 rounded-xl border-2 flex items-center justify-center transition-all",
                   darkMode === "dark"
-                    ? "border-primary bg-[#0F172A]"
+                    ? "border-primary bg-card"
                     : "border-border bg-muted/30",
                 )}
               >

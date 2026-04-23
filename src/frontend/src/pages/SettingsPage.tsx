@@ -9,9 +9,12 @@ import {
   Clock,
   CreditCard,
   FileQuestion,
+  Layers,
   Menu,
   Palette,
   Shield,
+  Star,
+  Table2,
   Users,
   X,
 } from "lucide-react";
@@ -95,6 +98,27 @@ const CATEGORIES: SettingsCategory[] = [
     href: "/dashboard/settings/seasonal",
     icon: CalendarDays,
     labelKey: "settings.nav.seasonal",
+    active: true,
+  },
+  {
+    id: "zones",
+    href: "/dashboard/settings/zones",
+    icon: Layers,
+    labelKey: "settings.nav.zones",
+    active: true,
+  },
+  {
+    id: "experiences",
+    href: "/dashboard/settings/experiences",
+    icon: Star,
+    labelKey: "settings.nav.experiences",
+    active: true,
+  },
+  {
+    id: "seating-plan",
+    href: "/dashboard/settings/seating-plan",
+    icon: Table2,
+    labelKey: "settings.nav.seatingPlan",
     active: true,
   },
 ];
@@ -214,11 +238,7 @@ export default function SettingsPage() {
                     active ? "text-primary" : "",
                   )}
                 />
-                <span className="flex-1 truncate">
-                  {t(
-                    `settings.nav.${cat.id === "opening-hours" ? "openingHours" : cat.id === "reservation-rules" ? "reservationRules" : cat.id === "guest-form" ? "guestForm" : cat.id}`,
-                  )}
-                </span>
+                <span className="flex-1 truncate">{t(cat.labelKey)}</span>
                 {!cat.active && (
                   <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
                     {t("settings.soon")}
@@ -247,11 +267,7 @@ export default function SettingsPage() {
             <Menu className="h-5 w-5" />
           </button>
           <span className="text-sm font-semibold text-foreground">
-            {activeCategory
-              ? t(
-                  `settings.nav.${activeCategory.id === "opening-hours" ? "openingHours" : activeCategory.id === "reservation-rules" ? "reservationRules" : activeCategory.id === "guest-form" ? "guestForm" : activeCategory.id}`,
-                )
-              : t("settings.title")}
+            {activeCategory ? t(activeCategory.labelKey) : t("settings.title")}
           </span>
         </div>
 

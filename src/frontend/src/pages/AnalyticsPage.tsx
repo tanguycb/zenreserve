@@ -31,26 +31,26 @@ import {
   YAxis,
 } from "recharts";
 
-// ── Brand colors ──────────────────────────────────────────────────────────────
-const GREEN = "#22C55E";
-const BLUE = "#3B82F6";
-const AMBER = "#D97706";
-const PURPLE = "#A855F7";
-const GOLD = "#c8a96e";
+// ── BUG-NEW-005 fix: Use oklch() wrapper for CSS custom properties ────────────
+// CSS variables are defined as raw OKLCH values (e.g. "0.7 0.19 142").
+// Recharts requires valid CSS color strings — oklch(var(--...)) is correct.
+// hsl(var(--...)) produces invalid values because the CSS vars contain OKLCH data.
+const GREEN = "oklch(var(--primary))";
+const BLUE = "oklch(var(--accent))";
+const AMBER = "oklch(var(--secondary))";
+const PURPLE = "oklch(var(--ring))";
+const GOLD = "oklch(var(--muted-foreground))";
 
-const ZONE_COLORS: Record<string, string> = {
-  Binnen: GREEN,
-  Terras: BLUE,
-  Bar: AMBER,
-  Privézaal: PURPLE,
-};
+// Chart structural colors — semantic tokens for grid lines and axis ticks
+const CHART_GRID = "oklch(var(--border))";
+const CHART_TICK = "oklch(var(--muted-foreground))";
 
-// ── Recharts tooltip style ────────────────────────────────────────────────────
+// ── Recharts tooltip style (uses CSS vars via inline reference) ───────────────
 const TOOLTIP_STYLE = {
-  backgroundColor: "#1E2937",
-  border: "1px solid #334155",
+  backgroundColor: "oklch(var(--card))",
+  border: "1px solid oklch(var(--border))",
   borderRadius: "8px",
-  color: "#F1F5F9",
+  color: "oklch(var(--card-foreground))",
   fontSize: "12px",
 };
 
@@ -111,9 +111,9 @@ function KpiCard({
         {trend && (
           <div className="mt-3 flex items-center gap-1">
             {trend === "up" ? (
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
             ) : trend === "down" ? (
-              <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+              <TrendingDown className="h-3.5 w-3.5 text-destructive" />
             ) : null}
           </div>
         )}
@@ -142,11 +142,11 @@ function Section({
   );
 }
 
-// ── Peak hour bar color ───────────────────────────────────────────────────────
+// ── Peak hour bar color (using CSS token-based oklch values) ─────────────────
 function getPeakColor(pct: number): string {
-  if (pct >= 80) return "#EF4444";
-  if (pct >= 50) return "#D97706";
-  return "#22C55E";
+  if (pct >= 80) return "oklch(var(--destructive))";
+  if (pct >= 50) return AMBER;
+  return GREEN;
 }
 
 // ── Main AnalyticsPage ────────────────────────────────────────────────────────
@@ -156,9 +156,7 @@ export default function AnalyticsPage() {
 
   const { data: reservations, isLoading: resLoading } = useReservations();
   const { data: aiStats } = useSuggestionAccuracyStats(30);
-  const [activeZones, setActiveZones] = useState<Set<string>>(
-    new Set(["Binnen", "Terras", "Bar", "Privézaal"]),
-  );
+  const [activeZones, setActiveZones] = useState<Set<string>>(new Set());
 
   const {
     analytics,
@@ -168,8 +166,17 @@ export default function AnalyticsPage() {
     setCustomStart,
     customEnd,
     setCustomEnd,
+    zoneColors,
     hasData,
   } = useAnalytics({ reservations: reservations ?? undefined, lang });
+
+  // Sync activeZones when zone list is first computed from real data
+  const currentZoneKey = analytics.zoneNames.join(",");
+  const [lastZoneKey, setLastZoneKey] = useState("");
+  if (currentZoneKey !== lastZoneKey && analytics.zoneNames.length > 0) {
+    setLastZoneKey(currentZoneKey);
+    setActiveZones(new Set(analytics.zoneNames));
+  }
 
   const isLoading = resLoading;
 
@@ -345,7 +352,7 @@ export default function AnalyticsPage() {
               <div className="flex flex-wrap gap-2">
                 {analytics.zoneNames.map((zone) => {
                   const active = activeZones.has(zone);
-                  const color = ZONE_COLORS[zone] ?? GREEN;
+                  const color = zoneColors[zone] ?? GREEN;
                   return (
                     <button
                       key={zone}
@@ -369,7 +376,7 @@ export default function AnalyticsPage() {
                     >
                       <span
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: active ? color : "#475569" }}
+                        style={{ backgroundColor: active ? color : CHART_TICK }}
                       />
                       {zone}
                     </button>
@@ -384,20 +391,20 @@ export default function AnalyticsPage() {
                 data={analytics.occupancyByZone}
                 margin={{ top: 8, right: 16, left: -10, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: "#94A3B8", fontSize: 10 }}
+                  tick={{ fill: CHART_TICK, fontSize: 10 }}
                   interval={Math.max(
                     1,
                     Math.floor(analytics.occupancyByZone.length / 8) - 1,
                   )}
                   tickLine={false}
-                  axisLine={{ stroke: "#334155" }}
+                  axisLine={{ stroke: CHART_GRID }}
                 />
                 <YAxis
                   unit="%"
-                  tick={{ fill: "#94A3B8", fontSize: 10 }}
+                  tick={{ fill: CHART_TICK, fontSize: 10 }}
                   domain={[0, 100]}
                   tickLine={false}
                   axisLine={false}
@@ -409,7 +416,7 @@ export default function AnalyticsPage() {
                 <Legend
                   wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
                   formatter={(value) => (
-                    <span style={{ color: "#94A3B8" }}>{value}</span>
+                    <span style={{ color: CHART_TICK }}>{value}</span>
                   )}
                 />
                 {analytics.zoneNames
@@ -419,7 +426,7 @@ export default function AnalyticsPage() {
                       key={zone}
                       type="monotone"
                       dataKey={zone}
-                      stroke={ZONE_COLORS[zone] ?? GREEN}
+                      stroke={zoneColors[zone] ?? GREEN}
                       strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 4 }}
@@ -450,18 +457,18 @@ export default function AnalyticsPage() {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#334155"
+                  stroke={CHART_GRID}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="hour"
-                  tick={{ fill: "#94A3B8", fontSize: 9 }}
+                  tick={{ fill: CHART_TICK, fontSize: 9 }}
                   tickLine={false}
-                  axisLine={{ stroke: "#334155" }}
+                  axisLine={{ stroke: CHART_GRID }}
                   interval={1}
                 />
                 <YAxis
-                  tick={{ fill: "#94A3B8", fontSize: 10 }}
+                  tick={{ fill: CHART_TICK, fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -486,9 +493,12 @@ export default function AnalyticsPage() {
             {/* Color legend */}
             <div className="mt-3 flex items-center gap-4 flex-wrap px-3">
               {[
-                { color: "#22C55E", label: t("analytics.peakLow") },
-                { color: "#D97706", label: t("analytics.peakMedium") },
-                { color: "#EF4444", label: t("analytics.peakHigh") },
+                { color: GREEN, label: t("analytics.peakLow") },
+                { color: AMBER, label: t("analytics.peakMedium") },
+                {
+                  color: "oklch(var(--destructive))",
+                  label: t("analytics.peakHigh"),
+                },
               ].map(({ color, label }) => (
                 <div key={color} className="flex items-center gap-1.5">
                   <div
@@ -521,17 +531,17 @@ export default function AnalyticsPage() {
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="#334155"
+                    stroke={CHART_GRID}
                     vertical={false}
                   />
                   <XAxis
                     dataKey="day"
-                    tick={{ fill: "#94A3B8", fontSize: 11 }}
+                    tick={{ fill: CHART_TICK, fontSize: 11 }}
                     tickLine={false}
-                    axisLine={{ stroke: "#334155" }}
+                    axisLine={{ stroke: CHART_GRID }}
                   />
                   <YAxis
-                    tick={{ fill: "#94A3B8", fontSize: 10 }}
+                    tick={{ fill: CHART_TICK, fontSize: 10 }}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -576,17 +586,17 @@ export default function AnalyticsPage() {
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="#334155"
+                      stroke={CHART_GRID}
                       vertical={false}
                     />
                     <XAxis
                       dataKey="size"
-                      tick={{ fill: "#94A3B8", fontSize: 11 }}
+                      tick={{ fill: CHART_TICK, fontSize: 11 }}
                       tickLine={false}
-                      axisLine={{ stroke: "#334155" }}
+                      axisLine={{ stroke: CHART_GRID }}
                     />
                     <YAxis
-                      tick={{ fill: "#94A3B8", fontSize: 10 }}
+                      tick={{ fill: CHART_TICK, fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
                     />
@@ -602,9 +612,14 @@ export default function AnalyticsPage() {
                         <Cell
                           key={entry.size}
                           fill={
-                            [GREEN, BLUE, AMBER, PURPLE, "#EC4899", "#14B8A6"][
-                              idx % 6
-                            ]
+                            [
+                              GREEN,
+                              BLUE,
+                              AMBER,
+                              PURPLE,
+                              GOLD,
+                              "oklch(var(--secondary))",
+                            ][idx % 6]
                           }
                           opacity={0.85}
                         />

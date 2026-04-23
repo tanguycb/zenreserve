@@ -1,12 +1,14 @@
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ExperienceCard, RestaurantCard } from "@/components/RestaurantCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useRestaurantAvailability,
   useRestaurantConfig,
   useSearchFilters,
 } from "@/hooks/useRestaurantSearch";
+import { useOpeningHoursConfig } from "@/hooks/useSettings";
 import type { TimeSlot } from "@/types";
-import { CalendarDays, ChefHat, ChevronLeft, Users } from "lucide-react";
+import { CalendarDays, ChefHat, ChevronLeft, Clock, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,87 +17,43 @@ import WidgetPage from "./WidgetPage";
 // ── Skeleton components ───────────────────────────────────────────────────────
 function SkeletonRestaurantCard() {
   return (
-    <div
-      className="w-full overflow-hidden"
-      style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        boxShadow: "0 4px 24px rgba(31,41,55,0.10)",
-      }}
-    >
-      <div
-        className="w-full animate-pulse"
-        style={{ height: 240, backgroundColor: "#F3F4F6" }}
-      />
-      <div className="px-5 pt-4 pb-5" style={{ backgroundColor: "#FAF7F0" }}>
-        <div
-          className="h-6 rounded-lg mb-2 animate-pulse"
-          style={{ backgroundColor: "#E5E7EB", width: "60%" }}
-        />
-        <div
-          className="h-4 rounded mb-3 animate-pulse"
-          style={{ backgroundColor: "#E5E7EB", width: "40%" }}
-        />
-        <div
-          className="h-3 rounded mb-1 animate-pulse"
-          style={{ backgroundColor: "#E5E7EB" }}
-        />
-        <div
-          className="h-3 rounded mb-4 animate-pulse"
-          style={{ backgroundColor: "#E5E7EB", width: "80%" }}
-        />
-        <div
-          className="h-12 rounded-xl animate-pulse"
-          style={{ backgroundColor: "#E5E7EB" }}
-        />
+    <div className="w-full overflow-hidden rounded-2xl bg-card shadow-subtle">
+      <Skeleton className="h-[240px] w-full rounded-none" />
+      <div className="px-5 pt-4 pb-5 bg-card space-y-3">
+        <Skeleton className="h-6 w-3/5 rounded-lg" />
+        <Skeleton className="h-4 w-2/5 rounded" />
+        <Skeleton className="h-3 w-full rounded" />
+        <Skeleton className="h-3 w-4/5 rounded" />
+        <Skeleton className="h-12 w-full rounded-xl" />
       </div>
     </div>
   );
 }
 
 function SkeletonSlot() {
-  return (
-    <div
-      className="animate-pulse rounded-xl"
-      style={{ height: 52, backgroundColor: "#E5E7EB", minWidth: 80 }}
-    />
-  );
+  return <Skeleton className="h-[52px] rounded-xl" style={{ minWidth: 80 }} />;
 }
 
 function SkeletonExperienceCard() {
-  return (
-    <div
-      className="flex-shrink-0 animate-pulse rounded-xl"
-      style={{ width: 200, height: 130, backgroundColor: "#E5E7EB" }}
-    />
-  );
+  return <Skeleton className="flex-shrink-0 rounded-xl h-[130px] w-[200px]" />;
 }
 
 // ── Slot availability coloring ────────────────────────────────────────────────
-function getSlotStyle(slot: TimeSlot): {
-  bg: string;
-  border: string;
-  text: string;
-  label: string;
-} {
-  if (!slot.available) {
-    return {
-      bg: "#F9FAFB",
-      border: "#E2E8F0",
-      text: "#9CA3AF",
-      label: "vol",
-    };
-  }
+function getSlotAvailability(slot: TimeSlot): "full" | "limited" | "free" {
+  if (!slot.available) return "full";
   const ratio = slot.booked / slot.capacity;
-  if (ratio >= 0.75) {
-    return {
-      bg: "#FFF7ED",
-      border: "#D97706",
-      text: "#D97706",
-      label: "beperkt",
-    };
+  if (ratio >= 0.75) return "limited";
+  return "free";
+}
+
+function getSlotClassName(availability: "full" | "limited" | "free"): string {
+  if (availability === "full") {
+    return "bg-destructive/10 text-destructive border border-destructive/30 opacity-60 cursor-not-allowed";
   }
-  return { bg: "#F0FDF4", border: "#22C55E", text: "#22C55E", label: "vrij" };
+  if (availability === "limited") {
+    return "bg-[oklch(var(--status-orange)/0.1)] text-[oklch(var(--status-orange))] border border-[oklch(var(--status-orange)/0.3)] hover:bg-[oklch(var(--status-orange)/0.2)]";
+  }
+  return "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20";
 }
 
 interface SelectedSlot {
@@ -103,6 +61,17 @@ interface SelectedSlot {
   time: string;
   partySize: number;
 }
+
+// Day index (0=Mon…6=Sun) → translation key
+const DAY_KEYS = [
+  "days.monday",
+  "days.tuesday",
+  "days.wednesday",
+  "days.thursday",
+  "days.friday",
+  "days.saturday",
+  "days.sunday",
+] as const;
 
 // ── GuestSearchPage ───────────────────────────────────────────────────────────
 export default function GuestSearchPage() {
@@ -117,6 +86,7 @@ export default function GuestSearchPage() {
     filters.date,
     filters.guests,
   );
+  const { data: openingHoursConfig } = useOpeningHoursConfig();
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
 
@@ -131,7 +101,6 @@ export default function GuestSearchPage() {
   }
 
   function handleBookNow() {
-    // Open widget inline from step 1 with no pre-fill
     setSelectedSlot({
       date: filters.date,
       time: "",
@@ -141,44 +110,48 @@ export default function GuestSearchPage() {
 
   const showSlots = !!filters.date && filters.guests > 0;
 
+  // Build a per-day summary from services: for each day 0-6 (Mon-Sun), collect open services
+  const openingHoursByDay: Array<{
+    dayIndex: number;
+    isClosed: boolean;
+    times: string[];
+  }> = Array.from({ length: 7 }, (_, dayIndex) => {
+    const isFixedClosed =
+      openingHoursConfig?.fixedClosingDays.includes(dayIndex) ?? false;
+    const activeSvcs =
+      openingHoursConfig?.services.filter((svc) =>
+        svc.enabledDays.includes(dayIndex),
+      ) ?? [];
+    return {
+      dayIndex,
+      isClosed: isFixedClosed || activeSvcs.length === 0,
+      times: activeSvcs.map((svc) => `${svc.openTime} – ${svc.closeTime}`),
+    };
+  });
+
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ backgroundColor: "#FAF7F0", fontFamily: "Inter, sans-serif" }}
-    >
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Skip nav */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:rounded-md focus:font-medium"
-        style={{ backgroundColor: "#22C55E", color: "#FFFFFF" }}
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:rounded-md focus:font-medium bg-primary text-primary-foreground"
       >
         {t("shared:accessibility.skipToContent")}
       </a>
 
       {/* Header */}
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b"
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderColor: "#E2E8F0",
-          boxShadow: "0 1px 8px rgba(31,41,55,0.07)",
-        }}
+        className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b bg-card shadow-subtle"
         data-ocid="guest-app-header"
       >
         <a
           href="/app"
           className="flex items-center gap-2 no-underline transition-opacity hover:opacity-80"
         >
-          <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: "#22C55E1A" }}
-          >
-            <ChefHat className="h-4 w-4" style={{ color: "#22C55E" }} />
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10">
+            <ChefHat className="h-4 w-4 text-primary" />
           </div>
-          <span
-            className="font-bold text-base"
-            style={{ color: "#1F2937", letterSpacing: "-0.01em" }}
-          >
+          <span className="font-bold text-base text-foreground tracking-[-0.01em]">
             ZenReserve
           </span>
         </a>
@@ -205,8 +178,7 @@ export default function GuestSearchPage() {
               <button
                 type="button"
                 onClick={() => setSelectedSlot(null)}
-                className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70 self-start"
-                style={{ color: "#6B7280" }}
+                className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70 self-start text-muted-foreground"
                 data-ocid="back-to-search-btn"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -233,13 +205,10 @@ export default function GuestSearchPage() {
             >
               {/* Hero title */}
               <div>
-                <h1
-                  className="font-bold mb-1"
-                  style={{ fontSize: 28, color: "#1F2937", lineHeight: 1.25 }}
-                >
+                <h1 className="text-[1.75rem] leading-tight font-bold mb-1 text-foreground">
                   {t("app:search.title")}
                 </h1>
-                <p className="text-sm" style={{ color: "#6B7280" }}>
+                <p className="text-sm text-muted-foreground">
                   {t("app:search.subtitle")}
                 </p>
               </div>
@@ -256,19 +225,12 @@ export default function GuestSearchPage() {
 
               {/* Search bar */}
               <div
-                className="rounded-2xl p-4 flex flex-col sm:flex-row gap-3"
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  boxShadow: "0 2px 12px rgba(31,41,55,0.08)",
-                }}
+                className="rounded-2xl p-4 flex flex-col sm:flex-row gap-3 bg-card shadow-soft"
                 data-ocid="search-bar"
               >
                 {/* Date picker */}
                 <label className="flex-1 flex flex-col gap-1">
-                  <span
-                    className="text-xs font-semibold flex items-center gap-1"
-                    style={{ color: "#6B7280" }}
-                  >
+                  <span className="text-xs font-semibold flex items-center gap-1 text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
                     {t("app:booking.selectedDate")}
                   </span>
@@ -277,26 +239,14 @@ export default function GuestSearchPage() {
                     value={filters.date}
                     min={today}
                     onChange={(e) => updateFilters({ date: e.target.value })}
-                    className="rounded-lg border px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2"
-                    style={{
-                      borderColor: "#E2E8F0",
-                      color: "#1F2937",
-                      backgroundColor: "#FAF7F0",
-                      height: 44,
-                    }}
+                    className="rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary h-11"
                     data-ocid="search-date-input"
                   />
                 </label>
 
                 {/* Party size */}
-                <label
-                  className="flex flex-col gap-1"
-                  style={{ minWidth: 120 }}
-                >
-                  <span
-                    className="text-xs font-semibold flex items-center gap-1"
-                    style={{ color: "#6B7280" }}
-                  >
+                <label className="flex flex-col gap-1 min-w-[120px]">
+                  <span className="text-xs font-semibold flex items-center gap-1 text-muted-foreground">
                     <Users className="h-3.5 w-3.5" />
                     {t("app:search.guestsLabel")}
                   </span>
@@ -305,13 +255,7 @@ export default function GuestSearchPage() {
                     onChange={(e) =>
                       updateFilters({ guests: Number(e.target.value) })
                     }
-                    className="rounded-lg border px-3 text-sm font-medium focus:outline-none focus:ring-2"
-                    style={{
-                      borderColor: "#E2E8F0",
-                      color: "#1F2937",
-                      backgroundColor: "#FAF7F0",
-                      height: 44,
-                    }}
+                    className="rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary h-11"
                     data-ocid="search-guests-select"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
@@ -333,15 +277,7 @@ export default function GuestSearchPage() {
                       .getElementById("availability-section")
                       ?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.97] flex items-center justify-center self-end"
-                  style={{
-                    height: 48,
-                    minWidth: 100,
-                    backgroundColor: "#22C55E",
-                    color: "#FFFFFF",
-                    paddingLeft: 20,
-                    paddingRight: 20,
-                  }}
+                  className="h-12 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.97] flex items-center justify-center self-end bg-primary text-primary-foreground px-5 min-w-[100px]"
                   data-ocid="search-submit-btn"
                 >
                   {t("app:search.searchButton")}
@@ -353,26 +289,13 @@ export default function GuestSearchPage() {
                 id="availability-section"
                 data-ocid="availability-section"
               >
-                <h2
-                  className="font-semibold mb-3 flex items-center gap-2"
-                  style={{ fontSize: 16, color: "#1F2937" }}
-                >
-                  <CalendarDays
-                    className="h-4 w-4"
-                    style={{ color: "#22C55E" }}
-                  />
+                <h2 className="text-base font-semibold mb-3 flex items-center gap-2 text-foreground">
+                  <CalendarDays className="h-4 w-4 text-primary" />
                   {t("app:restaurant.availability")}
                 </h2>
 
                 {!showSlots ? (
-                  <p
-                    className="text-sm py-4 text-center rounded-xl"
-                    style={{
-                      color: "#9CA3AF",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px dashed #E2E8F0",
-                    }}
-                  >
+                  <p className="text-sm py-4 text-center rounded-xl text-muted-foreground bg-card border border-dashed border-border">
                     {t("app:search.chooseDate")}
                   </p>
                 ) : slotsLoading ? (
@@ -384,25 +307,19 @@ export default function GuestSearchPage() {
                 ) : slots && slots.length > 0 ? (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {slots.map((slot) => {
-                      const style = getSlotStyle(slot);
+                      const availability = getSlotAvailability(slot);
                       return (
                         <button
                           key={slot.time}
                           type="button"
                           disabled={!slot.available}
                           onClick={() => handleSlotClick(slot.time)}
-                          className="rounded-xl text-sm font-bold flex flex-col items-center justify-center transition-all hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed"
-                          style={{
-                            height: 52,
-                            backgroundColor: style.bg,
-                            border: `1.5px solid ${style.border}`,
-                            color: style.text,
-                          }}
+                          className={`h-[52px] rounded-xl text-sm font-bold flex flex-col items-center justify-center transition-all active:scale-[0.97] ${getSlotClassName(availability)}`}
                           data-ocid={`time-slot-${slot.time.replace(":", "")}`}
                         >
                           <span>{slot.time}</span>
-                          <span style={{ fontSize: 10, opacity: 0.8 }}>
-                            {style.label}
+                          <span className="text-[10px] opacity-80">
+                            {t(`app:availability.${availability}`)}
                           </span>
                         </button>
                       );
@@ -410,12 +327,7 @@ export default function GuestSearchPage() {
                   </div>
                 ) : (
                   <p
-                    className="text-sm py-4 text-center rounded-xl"
-                    style={{
-                      color: "#9CA3AF",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px dashed #E2E8F0",
-                    }}
+                    className="text-sm py-4 text-center rounded-xl text-muted-foreground bg-card border border-dashed border-border"
                     data-ocid="no-slots-message"
                   >
                     {t("app:search.noResults")}
@@ -425,11 +337,8 @@ export default function GuestSearchPage() {
 
               {/* Experiences */}
               <section data-ocid="experiences-section">
-                <h2
-                  className="font-semibold mb-3 flex items-center gap-2"
-                  style={{ fontSize: 16, color: "#1F2937" }}
-                >
-                  <ChefHat className="h-4 w-4" style={{ color: "#D97706" }} />
+                <h2 className="text-base font-semibold mb-3 flex items-center gap-2 text-foreground">
+                  <ChefHat className="h-4 w-4 text-[oklch(var(--status-orange))]" />
                   {t("app:restaurant.experiences")}
                 </h2>
                 <div
@@ -453,36 +362,43 @@ export default function GuestSearchPage() {
 
               {/* About / Opening hours */}
               <section
-                className="rounded-2xl p-5"
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  boxShadow: "0 2px 12px rgba(31,41,55,0.06)",
-                }}
+                className="rounded-2xl p-5 bg-card shadow-soft"
                 data-ocid="opening-hours-section"
               >
-                <h2
-                  className="font-semibold mb-3"
-                  style={{ fontSize: 15, color: "#1F2937" }}
-                >
+                <h2 className="text-sm font-semibold mb-3 flex items-center gap-2 text-foreground">
+                  <Clock className="h-4 w-4 text-primary" />
                   {t("app:restaurant.openingHours")}
                 </h2>
-                {restaurant?.openingHours && (
+                {openingHoursConfig ? (
                   <ul className="space-y-1.5">
-                    {Object.entries(restaurant.openingHours).map(
-                      ([day, hours]) => (
-                        <li
-                          key={day}
-                          className="flex justify-between text-sm"
-                          style={{ color: "#4B5563" }}
+                    {openingHoursByDay.map(({ dayIndex, isClosed, times }) => (
+                      <li
+                        key={dayIndex}
+                        className="flex justify-between text-sm text-foreground"
+                      >
+                        <span className="font-medium">
+                          {t(`app:${DAY_KEYS[dayIndex]}`)}
+                        </span>
+                        <span
+                          className={
+                            isClosed
+                              ? "text-muted-foreground"
+                              : "text-foreground"
+                          }
                         >
-                          <span className="font-medium capitalize">{day}</span>
-                          <span>
-                            {hours.open} – {hours.close}
-                          </span>
-                        </li>
-                      ),
-                    )}
+                          {isClosed
+                            ? t("app:restaurant.closed")
+                            : times.join(" · ")}
+                        </span>
+                      </li>
+                    ))}
                   </ul>
+                ) : (
+                  <div className="space-y-2">
+                    {(["mon", "tue", "wed", "thu", "fri"] as const).map((d) => (
+                      <Skeleton key={d} className="h-5 w-full rounded" />
+                    ))}
+                  </div>
                 )}
               </section>
             </motion.div>
@@ -492,18 +408,16 @@ export default function GuestSearchPage() {
 
       {/* Footer */}
       <footer
-        className="py-5 px-4 flex flex-col items-center gap-2 border-t"
-        style={{ backgroundColor: "#FFFFFF", borderColor: "#E2E8F0" }}
+        className="py-5 px-4 flex flex-col items-center gap-2 border-t bg-card"
         data-ocid="guest-app-footer"
       >
-        <p className="text-xs" style={{ color: "#9CA3AF" }}>
-          Aangedreven door{" "}
+        <p className="text-xs text-muted-foreground">
+          {t("app:footer.poweredBy")}{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold hover:underline"
-            style={{ color: "#22C55E" }}
+            className="font-semibold hover:underline text-primary"
           >
             caffeine.ai
           </a>{" "}

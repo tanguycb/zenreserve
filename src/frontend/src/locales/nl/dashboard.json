@@ -9,7 +9,37 @@
     "noShows": "No-shows",
     "kpiSection": "Prestatie-indicatoren",
     "revenueToday": "Omzet vandaag",
-    "today": "Vandaag"
+    "today": "Vandaag",
+    "occupancyWidget": "Bezetting vandaag",
+    "barometerSubtitle": "Drukte barometer",
+    "barometerLow": "Rustig",
+    "barometerMedium": "Druk",
+    "barometerHigh": "Vol",
+    "barometerSeats": "plaatsen",
+    "couvertsToday": "Couverts vandaag",
+    "waitlistCount": "Wachtlijst vandaag",
+    "cancellationRate": "Annuleringsgraad",
+    "newReservation": "Nieuwe reservatie",
+    "newReservationOption": "Reservatie",
+    "newReservationOptionHint": "Gast uitnodigen",
+    "walkInOption": "Walk-In",
+    "walkInOptionHint": "Geen reservatie nodig",
+    "couvertsPerService": "Couverts per dienst vandaag",
+    "noCouverts": "Geen couverts vandaag",
+    "covers": "cov.",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Diner",
+    "aiInsightLabel": "AI Inzicht"
+  },
+  "walkIn": {
+    "title": "Walk-In",
+    "activeService": "Huidige dienst",
+    "description": "Selecteer de dienst en ga direct naar het tafelplan om een beschikbare tafel als bezet te markeren. Geen gastgegevens nodig.",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Diner",
+    "now": "Nu actief",
+    "cancel": "Annuleren",
+    "confirm": "Ga naar tafelplan"
   },
   "reservations": {
     "title": "Reserveringen",
@@ -39,7 +69,17 @@
       "partyShort": "Aantal pers.",
       "experience": "Ervaring",
       "status": "Status",
-      "actions": "Acties"
+      "actions": "Acties",
+      "table": "Tafel"
+    },
+    "reservation": {
+      "table": "Tafel",
+      "noTable": "Geen tafel toegewezen",
+      "assignTable": "Tafel koppelen",
+      "changeTable": "Tafel wijzigen",
+      "unlinkTable": "Ontkoppelen",
+      "tableAssigned": "Tafel gekoppeld",
+      "selectTable": "Kies een tafel"
     },
     "actions": {
       "view": "Bekijk reservering van {{name}}",
@@ -51,7 +91,21 @@
       "title": "Tafelplan overzicht",
       "filter_message": "Reserveringen gefilterd op Tafel {{table}} — klik opnieuw om te wissen"
     },
-    "statusError": "Status bijwerken mislukt. Probeer opnieuw."
+    "statusError": "Status bijwerken mislukt. Probeer opnieuw.",
+    "edit": "Bewerken",
+    "saveChanges": "Wijzigingen opslaan",
+    "cancelEdit": "Annuleren",
+    "changeHistory": "Wijzigingen",
+    "noChanges": "Geen wijzigingen",
+    "changedBy": "Gewijzigd door",
+    "fields": {
+      "date": "Datum",
+      "time": "Tijdstip",
+      "partySize": "Aantal personen",
+      "notes": "Opmerkingen",
+      "status": "Status",
+      "experience": "Ervaring"
+    }
   },
   "newReservation": {
     "title": "Nieuwe reservering",
@@ -70,6 +124,9 @@
     "table": "Tafel",
     "autoAssign": "Automatisch toewijzen",
     "autoAssignHint": "Kies 'Automatisch' voor slimme tafelselectie op basis van gezelschapsgrootte",
+    "experience": "Ervaring (optioneel)",
+    "noExperience": "Geen ervaring",
+    "experienceOnlyDuring": "alleen tijdens {{services}}",
     "paymentStatus": "Betalingsstatus",
     "paymentNone": "Geen betaling",
     "paymentPending": "In behandeling",
@@ -138,7 +195,22 @@
     "tagEvent": "Evenement",
     "tagSpecial": "Special",
     "empty": "Geen ervaringen aangemaakt",
-    "emptyHint": "Voeg uw eerste menu, evenement of special toe om gasten extra opties te bieden bij hun reservering"
+    "emptyHint": "Voeg uw eerste menu, evenement of special toe om gasten extra opties te bieden bij hun reservering",
+    "requiredToggle": "Verplicht voor gasten",
+    "requiredHint": "Gast moet een ervaring kiezen",
+    "optionalHint": "Gast kan ervaring overslaan",
+    "markedRequired": "\"{{name}}\" gemarkeerd als verplicht",
+    "markedOptional": "\"{{name}}\" gemarkeerd als optioneel",
+    "deleteTitle": "Ervaring verwijderen",
+    "deleteConfirm": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "servicesLabel": "Van toepassing op service",
+    "servicesHint": "Selecteer niets = van toepassing op alle services",
+    "allServices": "Alle services",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Diner",
+    "daysLabel": "Van toepassing op dagen",
+    "daysHint": "Selecteer niets = van toepassing op alle dagen",
+    "allDays": "Alle dagen"
   },
   "waitlist": {
     "title": "Wachtlijst",
@@ -256,7 +328,13 @@
     "tableAriaLabel": "{{name}}, {{status}}, {{capacity}} zitplaatsen",
     "canvasAriaLabel": "Interactief tafelplan",
     "decreaseCapacity": "Verlaag capaciteit",
-    "increaseCapacity": "Verhoog capaciteit"
+    "increaseCapacity": "Verhoog capaciteit",
+    "noTablesYet": "Er staan nog geen tafels op het tafelplan",
+    "noTablesYetHint": "Ga naar Instellingen > Capaciteit om tafels in te stellen, of voeg ze hier handmatig toe.",
+    "importFromSettings": "Importeer tafels uit instellingen",
+    "syncing": "Importeren…",
+    "syncSuccess": "Tafels zijn succesvol toegevoegd aan het tafelplan.",
+    "syncNotAvailable": "Synchronisatie is nog niet beschikbaar. Voeg tafels handmatig toe."
   },
   "aiSuggestion": {
     "buttonLabel": "AI Suggestie",
@@ -400,6 +478,7 @@
     "save": "Opslaan",
     "saving": "Opslaan…",
     "saved": "Instellingen opgeslagen",
+    "savedWithSync": "Instellingen opgeslagen. Tafels zijn automatisch toegevoegd aan het tafelplan.",
     "saveError": "Opslaan mislukt. Probeer het opnieuw.",
     "unsavedChanges": "U hebt niet-opgeslagen wijzigingen",
     "comingSoon": "Binnenkort beschikbaar",
@@ -415,7 +494,53 @@
       "notifications": "Notificaties & berichten",
       "integrations": "Integraties",
       "team": "Team & rechten",
-      "seasonal": "Seizoensinstellingen"
+      "seasonal": "Seizoensinstellingen",
+      "zones": "Zones",
+      "experiences": "Ervaringen",
+      "seatingPlan": "Tafelplan"
+    },
+    "seatingSettings": {
+      "title": "Tafelplan configuratie",
+      "subtitle": "Beheer de tafels, zones en indeling van uw vloerplan. {{count}} tafels geconfigureerd."
+    },
+    "walkin": {
+      "banner": "Walk-in modus — klik op een tafel om deze als bezet te markeren",
+      "dismiss": "Sluiten",
+      "subtitle": "Walk-in modus — klik een tafel aan",
+      "clickHint": "Klik op een tafel om deze als bezet te markeren voor walk-in gasten",
+      "alreadyOccupied": "{{name}} is al bezet",
+      "markedOccupied": "{{name}} is nu gemarkeerd als bezet",
+      "markError": "Kon tafelstatus niet wijzigen"
+    },
+    "viewOnly": {
+      "subtitle": "{{count}} tafels · selecteer datum en dienst",
+      "noTablesHint": "Ga naar Instellingen → Tafelplan om tafels toe te voegen en in te richten."
+    },
+    "today": "Vandaag",
+    "datePrev": "Vorige dag",
+    "dateNext": "Volgende dag",
+    "goToToday": "Ga naar vandaag",
+    "zones": {
+      "subtitle": "Definieer de ruimtes van uw restaurant die gebruikt worden in het tafelplan, de beschikbaarheid en de statistieken",
+      "listTitle": "Geconfigureerde zones",
+      "listHint": "Elke zone heeft een kleur, naam en maximaal aantal gasten",
+      "addTitle": "Nieuwe zone toevoegen",
+      "addZone": "Zone toevoegen",
+      "name": "Naam",
+      "namePlaceholder": "Bijv. Terras, Bar, Privézaal…",
+      "maxGuests": "Max. gasten",
+      "maxGuestsLabel": "{{count}} gasten max.",
+      "color": "Kleur",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleteConfirm": "Verwijderen?",
+      "cancel": "Annuleren",
+      "emptyTitle": "Nog geen zones geconfigureerd",
+      "emptyHint": "Voeg uw eerste zone toe om te beginnen. Zones worden gebruikt in het tafelplan, de widget en de analytics.",
+      "added": "Zone toegevoegd",
+      "updated": "Zone bijgewerkt",
+      "deleted": "Zone verwijderd",
+      "infoNote": "Zones zijn gekoppeld aan het tafelplan en de reserveringswidget. Het verwijderen van een zone verwijdert deze ook uit alle tafels en filters."
     },
     "days": {
       "mon": "Maa",
@@ -489,6 +614,23 @@
       "occupancyCeilingHint": "Begrens boekingen om walk-ins toe te laten",
       "occupancyCeilingLabel": "Nooit meer dan {{value}}% bezetting om walk-ins toe te laten"
     },
+    "tableGroups": {
+      "title": "Tafelgroepen",
+      "description": "Definieer welke tafels gecombineerd kunnen worden voor grotere groepen",
+      "addGroup": "Groep toevoegen",
+      "groupName": "Groepsnaam",
+      "groupNamePlaceholder": "Bijv. Terras combi",
+      "selectTables": "Selecteer tafels",
+      "totalCapacity": "Totale capaciteit",
+      "noGroups": "Nog geen tafelgroepen aangemaakt",
+      "noTablesHint": "Voeg eerst tafeltypes toe hierboven",
+      "descriptionOptional": "Omschrijving (optioneel)",
+      "descriptionPlaceholder": "Bijv. Grote zaal voor feestjes",
+      "deleteConfirm": "Verwijderen?",
+      "cancel": "Annuleren",
+      "saved": "Tafelgroep opgeslagen",
+      "deleted": "Tafelgroep verwijderd"
+    },
     "reservationRules": {
       "subtitle": "Beheer boekingsvenster, annuleringsbeleid, aanbetaling en verblijfsduur",
       "advanceBookingTitle": "Boekingsvenster",
@@ -533,6 +675,8 @@
       "requireAllergiesHint": "Gast moet eventuele allergieën vermelden",
       "requireDietPreferences": "Dieetwensen verplicht",
       "requireDietHint": "Gast moet dieetvoorkeur opgeven",
+      "showBabiesChildren": "Baby's / kinderen veld tonen in widget",
+      "showBabiesChildrenHint": "Toont de optie voor baby's en kinderen (< 3 jaar) in de widget",
       "specialRequestsTitle": "Standaard speciale verzoeken",
       "specialRequestsSubtitle": "Schakel de opties in die gasten kunnen aanvinken bij hun reservering",
       "specialRequest": {
@@ -756,7 +900,7 @@
       "addMember": "Medewerker uitnodigen",
       "invite": "Uitnodigen",
       "invited": "{{name}} uitgenodigd",
-      "inviteError": "Uitnodigen mislukt. Probeer opnieuw.",
+      "inviteError": "Kon teamlid niet toevoegen — controleer je verbinding en probeer opnieuw.",
       "inviteNote": "De medewerker zal moeten inloggen met Internet Identity en de toegewezen rol selecteren.",
       "confirmRemove": "Weet u zeker dat u {{name}} wilt verwijderen uit het team?",
       "removed": "{{name}} verwijderd",
@@ -781,7 +925,10 @@
         "name": "Naam",
         "namePlaceholder": "Sophie Janssen",
         "email": "E-mail",
-        "role": "Rol toewijzen"
+        "role": "Rol toewijzen",
+        "principalId": "Internet Identity principal ID",
+        "principalIdPlaceholder": "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxx",
+        "principalIdHint": "Het principal ID is de unieke identifier van de medewerker's Internet Identity. De medewerker kan dit vinden door in te loggen via identity.ic0.app."
       }
     },
     "seasonal": {
@@ -835,6 +982,25 @@
       "infoNote": "Seizoensinstellingen bepalen welke zones beschikbaar zijn en hoeveel gasten er per periode geboekt kunnen worden. Combineer met openingsuren voor maximale controle."
     }
   },
+  "auditLog": {
+    "title": "Auditlogboek",
+    "subtitle": "Overzicht van alle instellingswijzigingen door beheerders",
+    "columns": {
+      "timestamp": "Tijdstip",
+      "who": "Wie",
+      "page": "Pagina",
+      "action": "Actie",
+      "summary": "Samenvatting"
+    },
+    "emptyTitle": "Nog geen wijzigingen geregistreerd",
+    "emptyHint": "Zodra instellingen worden gewijzigd, verschijnen de wijzigingen hier",
+    "paginationInfo": "{{from}}–{{to}} van {{total}} vermeldingen",
+    "prev": "Vorige",
+    "next": "Volgende",
+    "forbidden": "Toegang geweigerd",
+    "forbiddenHint": "Alleen eigenaren en managers kunnen het auditlogboek bekijken",
+    "backToDashboard": "Terug naar dashboard"
+  },
   "analytics": {
     "title": "Analyse",
     "subtitle": "Bezettingstrends, piekuren en reserveringspatronen",
@@ -872,13 +1038,20 @@
     "prevWeek": "Vorige week",
     "nextWeek": "Volgende week",
     "currentWeek": "Ga naar huidige week",
+    "prevMonth": "Vorige maand",
+    "nextMonth": "Volgende maand",
+    "currentMonth": "Ga naar huidige maand",
     "dayNames": ["Maa", "Din", "Woe", "Don", "Vri", "Zat", "Zon"],
+    "dayNamesShort": ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
     "reservationCount": "{{count}} reservering",
     "reservationCountPlural": "{{count}} reserveringen",
     "cardLabel": "{{name}} om {{time}}, {{count}} personen",
     "legendConfirmed": "Bevestigd",
     "legendWaitlist": "Wachtlijst",
     "legendExperience": "Ervaring",
-    "legendCancelled": "Geannuleerd"
+    "legendCancelled": "Geannuleerd",
+    "legendAvailable": "< 50% vol",
+    "legendBusy": "50–80% vol",
+    "legendFull": "> 80% vol"
   }
 }

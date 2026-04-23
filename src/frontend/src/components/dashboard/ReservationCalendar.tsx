@@ -1,3 +1,4 @@
+import { useOpeningHoursConfig } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 import type { Reservation } from "@/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,205 +8,287 @@ import { useTranslation } from "react-i18next";
 interface ReservationCalendarProps {
   reservations: Reservation[];
   onSelectReservation: (r: Reservation) => void;
+  /** Called when a service pill is clicked: navigates list view to that day+service */
+  onSelectDayService?: (date: string, serviceId: string) => void;
 }
 
-function getWeekStart(date: Date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday = 0
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function isoLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
-function addDays(date: Date, n: number) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
+function localToday(): string {
+  return isoLocalDate(new Date());
 }
 
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** Returns all dates in a calendar grid for a given year/month (includes leading/trailing days). */
+function buildCalendarGrid(year: number, month: number): Date[] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  // Start on Monday (ISO week)
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
+
+  const grid: Date[] = [];
+  for (let i = startDow; i > 0; i--) {
+    grid.push(new Date(year, month, 1 - i));
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    grid.push(new Date(year, month, d));
+  }
+  // Pad to complete last week row
+  while (grid.length % 7 !== 0) {
+    grid.push(
+      new Date(year, month + 1, grid.length - lastDay.getDate() - startDow + 1),
+    );
+  }
+  return grid;
 }
 
-const STATUS_BORDER: Record<string, string> = {
-  confirmed: "border-l-primary",
-  pending: "border-l-accent",
-  waitlist: "border-l-secondary",
-  cancelled: "border-l-destructive",
-  seated: "border-l-primary",
-  completed: "border-l-muted-foreground",
-  no_show: "border-l-destructive",
-};
+/** Returns occupancy pill color class based on fill ratio */
+function pillColor(booked: number, capacity: number): string {
+  if (capacity === 0) return "bg-muted/60 text-muted-foreground";
+  const ratio = booked / capacity;
+  if (ratio > 0.8) return "bg-destructive/80 text-white";
+  if (ratio >= 0.5) return "bg-amber-500/80 text-white";
+  return "bg-primary/80 text-white";
+}
 
-const STATUS_BG: Record<string, string> = {
-  confirmed: "bg-primary/10 hover:bg-primary/15",
-  pending: "bg-accent/10 hover:bg-accent/15",
-  waitlist: "bg-secondary/10 hover:bg-secondary/15",
-  cancelled: "bg-destructive/10 hover:bg-destructive/15",
-  seated: "bg-primary/15 hover:bg-primary/20",
-  completed: "bg-muted/60 hover:bg-muted",
-  no_show: "bg-destructive/10 hover:bg-destructive/15",
-};
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function ReservationCalendar({
   reservations,
-  onSelectReservation,
+  onSelectDayService,
 }: ReservationCalendarProps) {
-  const { t } = useTranslation("dashboard");
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const today = isoDate(new Date());
+  const { t, i18n } = useTranslation("dashboard");
+  const { data: openingHours } = useOpeningHoursConfig();
 
-  const DAY_NAMES = t("calendar.dayNames", { returnObjects: true }) as string[];
+  const today = localToday();
+  const nowDate = new Date();
+  const [year, setYear] = useState(nowDate.getFullYear());
+  const [month, setMonth] = useState(nowDate.getMonth());
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const DAY_NAMES_SHORT = (t("calendar.dayNamesShort", {
+    returnObjects: true,
+  }) as string[]) ?? ["Mo", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
+  const grid = buildCalendarGrid(year, month);
+
+  // Build lookup: date → reservation[]
   const resByDay: Record<string, Reservation[]> = {};
-  for (const day of days) {
-    resByDay[isoDate(day)] = [];
-  }
   for (const r of reservations) {
-    if (resByDay[r.date]) resByDay[r.date].push(r);
-  }
-  for (const key of Object.keys(resByDay)) {
-    resByDay[key].sort((a, b) => a.time.localeCompare(b.time));
+    if (!resByDay[r.date]) resByDay[r.date] = [];
+    resByDay[r.date].push(r);
   }
 
-  const weekLabel = `${days[0].toLocaleDateString(undefined, { day: "numeric", month: "long" })} – ${days[6].toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}`;
+  // Services from settings (with fallback defaults)
+  const services = openingHours?.services ?? [];
+
+  // Get booked count for a service on a given date
+  function getServiceBooking(
+    date: string,
+    service: {
+      id: string;
+      name: string;
+      openTime: string;
+      closeTime: string;
+      maxCapacity: number;
+    },
+  ) {
+    const dayRes = resByDay[date] ?? [];
+    const [openH, openM] = service.openTime.split(":").map(Number);
+    const [closeH, closeM] = service.closeTime.split(":").map(Number);
+    const openMins = openH * 60 + openM;
+    const closeMins = closeH * 60 + closeM;
+    const booked = dayRes.filter((r) => {
+      if (r.status === "cancelled") return false;
+      const [rH, rM] = r.time.split(":").map(Number);
+      const rMins = rH * 60 + rM;
+      return rMins >= openMins && rMins < closeMins;
+    });
+    return { booked: booked.length, capacity: service.maxCapacity };
+  }
+
+  function prevMonth() {
+    if (month === 0) {
+      setYear((y) => y - 1);
+      setMonth(11);
+    } else setMonth((m) => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) {
+      setYear((y) => y + 1);
+      setMonth(0);
+    } else setMonth((m) => m + 1);
+  }
+  function goToday() {
+    setYear(nowDate.getFullYear());
+    setMonth(nowDate.getMonth());
+  }
+
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(
+    i18n.language?.slice(0, 2) === "fr"
+      ? "fr-BE"
+      : i18n.language?.slice(0, 2) === "en"
+        ? "en-GB"
+        : "nl-BE",
+    { month: "long", year: "numeric" },
+  );
 
   return (
     <div className="space-y-3">
-      {/* Week navigation */}
-      <div className="flex items-center justify-between">
+      {/* Month navigation */}
+      <div className="flex items-center justify-between px-1">
         <button
           type="button"
-          onClick={() => setWeekStart((w) => addDays(w, -7))}
+          onClick={prevMonth}
           className="p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          aria-label={t("calendar.prevWeek")}
-          data-ocid="cal-prev-week"
+          aria-label={t("calendar.prevMonth")}
+          data-ocid="cal-prev-month"
         >
           <ChevronLeft className="h-5 w-5 text-muted-foreground" />
         </button>
 
         <button
           type="button"
-          onClick={() => setWeekStart(getWeekStart(new Date()))}
-          className="text-sm font-medium text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-2 py-1"
-          aria-label={t("calendar.currentWeek")}
-          data-ocid="cal-today"
+          onClick={goToday}
+          className="text-sm font-semibold text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-2 py-1 capitalize"
+          aria-label={t("calendar.currentMonth")}
+          data-ocid="cal-month-label"
         >
-          {weekLabel}
+          {monthLabel}
         </button>
 
         <button
           type="button"
-          onClick={() => setWeekStart((w) => addDays(w, 7))}
+          onClick={nextMonth}
           className="p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          aria-label={t("calendar.nextWeek")}
-          data-ocid="cal-next-week"
+          aria-label={t("calendar.nextMonth")}
+          data-ocid="cal-next-month"
         >
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </button>
       </div>
 
-      {/* 7-column grid */}
-      <div
-        className="grid grid-cols-7 gap-1.5"
-        aria-label={t("reservations.tabCalendar")}
-      >
-        {days.map((day, i) => {
-          const key = isoDate(day);
+      {/* Day-of-week header */}
+      <div className="grid grid-cols-7 gap-px">
+        {DAY_NAMES_SHORT.map((name) => (
+          <div
+            key={name}
+            className="text-center text-xs font-medium text-muted-foreground py-1.5"
+          >
+            {name}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {grid.map((day) => {
+          const key = isoLocalDate(day);
+          const isCurrentMonth = day.getMonth() === month;
           const isToday = key === today;
           const dayRes = resByDay[key] ?? [];
-          const countLabel =
-            dayRes.length === 1
-              ? t("calendar.reservationCount", { count: dayRes.length })
-              : t("calendar.reservationCountPlural", { count: dayRes.length });
+          const totalCount = dayRes.filter(
+            (r) => r.status !== "cancelled",
+          ).length;
 
           return (
             <div
-              key={key}
-              className="flex flex-col gap-1"
-              aria-label={`${DAY_NAMES[i]} ${day.toLocaleDateString(undefined, { day: "numeric", month: "long" })}, ${countLabel}`}
+              key={`${key}-cell`}
+              className={cn(
+                "bg-card min-h-[90px] p-1.5 flex flex-col gap-1",
+                !isCurrentMonth && "opacity-40",
+              )}
+              data-ocid={`cal.day.${key}`}
             >
-              {/* Day header */}
-              <div
-                className={cn(
-                  "flex flex-col items-center py-1.5 px-1 rounded-lg text-center",
-                  isToday
-                    ? "bg-primary/15 ring-1 ring-primary/40"
-                    : "bg-muted/30",
-                )}
-              >
+              {/* Date number */}
+              <div className="flex items-center justify-between">
                 <span
                   className={cn(
-                    "text-xs font-medium",
-                    isToday ? "text-primary" : "text-muted-foreground",
-                  )}
-                >
-                  {DAY_NAMES[i]}
-                </span>
-                <span
-                  className={cn(
-                    "text-sm font-semibold mt-0.5",
-                    isToday ? "text-primary" : "text-foreground",
+                    "w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold leading-none",
+                    isToday
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground",
                   )}
                 >
                   {day.getDate()}
                 </span>
-                {dayRes.length > 0 && (
-                  <span
-                    className={cn(
-                      "mt-1 text-xs rounded-full px-1.5 font-medium",
-                      isToday
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {dayRes.length}
+                {totalCount > 0 && !isToday && (
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {totalCount}
                   </span>
                 )}
               </div>
 
-              {/* Reservation cards */}
-              <div className="flex flex-col gap-1 min-h-[120px]">
-                {dayRes.slice(0, 4).map((r) => (
+              {/* Service pills */}
+              <div className="flex flex-col gap-0.5 flex-1">
+                {services.length === 0 && dayRes.length > 0 && (
+                  // Fallback if no services configured: show total count pill
                   <button
-                    key={r.id}
                     type="button"
-                    onClick={() => onSelectReservation(r)}
-                    className={cn(
-                      "w-full text-left rounded-md px-2 py-1.5 border-l-2 text-xs transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                      STATUS_BORDER[r.status] ?? "border-l-border",
-                      STATUS_BG[r.status] ?? "bg-muted/30",
-                    )}
-                    aria-label={t("calendar.cardLabel", {
-                      name: r.guestName,
-                      time: r.time,
-                      count: r.partySize,
-                    })}
-                    data-ocid="cal-reservation-card"
+                    onClick={() => onSelectDayService?.(key, "all")}
+                    className="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-medium truncate bg-primary/70 text-white hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    data-ocid={`cal.day.${key}.all`}
                   >
-                    <p className="font-medium text-foreground truncate leading-tight">
-                      {r.guestName.split(" ")[0]}
-                    </p>
-                    <p className="text-muted-foreground tabular-nums">
-                      {r.time} · {r.partySize}p
-                    </p>
+                    {totalCount} res.
                   </button>
-                ))}
-                {dayRes.length > 4 && (
-                  <p className="text-xs text-muted-foreground text-center py-0.5">
-                    {t("reservations.moreItems", {
-                      count: dayRes.length - 4,
-                    })}
-                  </p>
                 )}
+                {services.map((service) => {
+                  const { booked, capacity } = getServiceBooking(key, service);
+                  if (!isCurrentMonth) return null;
+                  if (booked === 0 && capacity === 0) return null;
+                  const color = pillColor(booked, capacity);
+
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => onSelectDayService?.(key, service.id)}
+                      className={cn(
+                        "w-full text-left px-1.5 py-0.5 rounded text-[10px] font-medium truncate transition-all",
+                        "hover:brightness-110 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                        color,
+                      )}
+                      aria-label={`${service.name}: ${booked}/${capacity}`}
+                      data-ocid={`cal.day.${key}.service.${service.id}`}
+                    >
+                      <span className="font-semibold">
+                        {service.name.length > 8
+                          ? `${service.name.slice(0, 7)}…`
+                          : service.name}
+                      </span>{" "}
+                      <span className="opacity-90">
+                        {booked}/{capacity}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground justify-end px-1">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-primary/80 inline-block" />
+          {t("calendar.legendAvailable")}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/80 inline-block" />
+          {t("calendar.legendBusy")}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-destructive/80 inline-block" />
+          {t("calendar.legendFull")}
+        </span>
       </div>
     </div>
   );

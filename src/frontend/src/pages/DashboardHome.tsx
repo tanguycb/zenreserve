@@ -1,11 +1,14 @@
 import { KPICard, SkeletonKPICardFull } from "@/components/dashboard/KPICard";
 import { MiniOccupancyWidget } from "@/components/dashboard/MiniOccupancyWidget";
 import { RecentReservations } from "@/components/dashboard/RecentReservations";
+import { useWaitlist } from "@/hooks/useDashboard";
 import { useKPIs, useReservations } from "@/hooks/useReservation";
+import { useCapacityConfig } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
   CalendarDays,
+  Clock,
   Sparkles,
   Users,
   XCircle,
@@ -150,6 +153,15 @@ export default function DashboardHome() {
   const { data: kpis, isLoading: kpisLoading } = useKPIs();
   const { data: allReservations = [], isLoading: resLoading } =
     useReservations();
+  const { data: capacityConfig } = useCapacityConfig();
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // BUG 3 fix: real waitlist count from backend (only waiting + offered entries)
+  const { data: waitlistEntries = [] } = useWaitlist(todayStr);
+  const realWaitlistCount = waitlistEntries.filter(
+    (e) => e.status === "waiting" || e.status === "offered",
+  ).length;
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -158,7 +170,6 @@ export default function DashboardHome() {
     day: "numeric",
   });
 
-  const todayStr = new Date().toISOString().split("T")[0];
   const todayReservations = allReservations.filter((r) => r.date === todayStr);
 
   // Derive confirmed covers per service directly from real reservations
@@ -195,7 +206,8 @@ export default function DashboardHome() {
 
   // Total confirmed covers for today
   const totalCovers = kpis?.todayCovers ?? lunchCovers + dinerCovers;
-  const totalCapacity = 100; // can be wired from settings later
+  // BUG-014: use real capacity from settings; fallback to 100 while loading
+  const totalCapacity = capacityConfig?.totalSeatsPerSlot ?? 100;
 
   // Cancellation rate derived from today's reservations
   const cancelCount = todayReservations.filter(
@@ -243,12 +255,13 @@ export default function DashboardHome() {
       trend: undefined,
     },
     {
-      key: "lunch",
-      title: t("dashboard:home.couvertsLunch", "Lunch couverts"),
-      value: lunchCovers,
-      icon: Users,
-      iconColor: "text-accent",
-      iconBg: "bg-accent/15",
+      key: "waitlist",
+      title: t("dashboard:home.waitlistCount", "Wachtlijst vandaag"),
+      value: realWaitlistCount,
+      icon: Clock,
+      iconColor:
+        realWaitlistCount > 0 ? "text-accent" : "text-muted-foreground",
+      iconBg: realWaitlistCount > 0 ? "bg-accent/15" : "bg-muted/30",
       trend: undefined,
     },
     {

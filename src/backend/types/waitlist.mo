@@ -6,6 +6,7 @@ module {
     #offered;
     #confirmed;
     #expired;
+    #removed_by_staff;
   };
 
   public type WaitlistEntry = {

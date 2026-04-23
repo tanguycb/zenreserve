@@ -17,7 +17,8 @@
     "availability": "Disponibilité",
     "about": "À propos",
     "openingHours": "Horaires d'ouverture",
-    "location": "Localisation"
+    "location": "Localisation",
+    "closed": "Fermé"
   },
   "booking": {
     "selectedDate": "Date sélectionnée",
@@ -25,5 +26,22 @@
     "partySize": "Nombre de convives",
     "continueBooking": "Continuer la réservation",
     "backToSearch": "Retour à la recherche"
+  },
+  "availability": {
+    "full": "Complet",
+    "limited": "Limité",
+    "free": "Disponible"
+  },
+  "days": {
+    "monday": "Lundi",
+    "tuesday": "Mardi",
+    "wednesday": "Mercredi",
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi",
+    "sunday": "Dimanche"
+  },
+  "footer": {
+    "poweredBy": "Propulsé par"
   }
 }

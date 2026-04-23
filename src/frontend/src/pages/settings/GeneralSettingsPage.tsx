@@ -39,28 +39,35 @@ export default function GeneralSettingsPage() {
     contactPhone: "",
     contactEmail: "",
   });
-  const [isDirty, setIsDirty] = useState(false);
+  // saved tracks the last-persisted snapshot so isDirty is derived, not manual.
+  const [saved, setSaved] = useState<GeneralInfo | null>(null);
 
   useEffect(() => {
     if (data) {
       setForm(data);
-      setIsDirty(false);
+      setSaved(data);
     }
   }, [data]);
 
+  const isDirty =
+    saved === null ||
+    (Object.keys(form) as (keyof GeneralInfo)[]).some(
+      (k) => form[k] !== saved[k],
+    );
+
   const set = <K extends keyof GeneralInfo>(key: K, value: GeneralInfo[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
-    setIsDirty(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await updateMutation.mutateAsync(form);
-      setIsDirty(false);
+      setSaved(form);
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     }
   };
 

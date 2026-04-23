@@ -261,8 +261,10 @@ export default function OpeningHoursSettingsPage() {
         exceptionalClosingDays: config.exceptionalClosingDays,
       });
       toast.success(t("settings.saved"));
-    } catch {
-      toast.error(t("settings.saveError"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[OpeningHoursSettings] save failed:", err);
+      toast.error(`${t("settings.saveError")}: ${message}`);
     } finally {
       setIsSaving(false);
     }

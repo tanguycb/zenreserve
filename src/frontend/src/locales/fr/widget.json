@@ -12,6 +12,7 @@
     "loading": "Chargement des dates...",
     "available": "Disponible",
     "fullyBooked": "Complet",
+    "closed": "Fermé",
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "weekdays": ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"],
@@ -41,7 +42,10 @@
     "allFullSub": "Tous les créneaux de cette date sont pris.",
     "waitlistCta": "Rejoindre la liste d'attente",
     "places": "pl.",
-    "slots": "Créneaux disponibles"
+    "slots": "Créneaux disponibles",
+    "closed": "Fermé",
+    "noSlots": "Aucun créneau disponible",
+    "noSlotsSub": "Choisissez une autre date ou rejoignez la liste d'attente."
   },
   "partySizeStep": {
     "title": "Nombre de personnes",
@@ -57,6 +61,7 @@
   "experienceStep": {
     "title": "Ajouter une expérience",
     "optional": "(optionnel)",
+    "required": "Obligatoire",
     "loading": "Chargement des expériences...",
     "noPreference": "Pas de préférence",
     "noPreferenceSub": "Juste une belle soirée à la carte",
@@ -64,7 +69,8 @@
     "skip": "Pas d'expérience",
     "tagMenu": "Menu",
     "tagEvent": "Événement",
-    "tagSpecial": "Spécial"
+    "tagSpecial": "Spécial",
+    "noExperiences": "Aucune expérience disponible"
   },
   "detailsStep": {
     "title": "Vos coordonnées",
@@ -103,6 +109,7 @@
     "successTitle": "Paiement réussi!",
     "successSub": "Acompte de {{amount}} traité.",
     "errorDefault": "Paiement échoué. Veuillez vérifier vos données de carte et réessayer.",
+    "errorRateLimit": "Trop de tentatives de réservation. Veuillez réessayer dans une heure.",
     "secureNote": "SSL 256 bits · Powered by Stripe · conforme PCI-DSS"
   },
   "confirmationStep": {

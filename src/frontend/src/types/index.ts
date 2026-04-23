@@ -24,7 +24,12 @@ export interface Experience {
   price: number; // in euro cents
   imageUrl?: string;
   available: boolean;
+  required: boolean;
   tag?: "menu" | "event" | "special";
+  /** Service IDs this experience applies to (empty = all services) */
+  serviceIds?: string[];
+  /** Days of week (0=Sun, 1=Mon, ..., 6=Sat) this experience applies to (empty = all days) */
+  dayOfWeek?: number[];
 }
 
 export interface Guest {
@@ -74,7 +79,8 @@ export interface WaitlistEntry {
   date: string;
   preferredTime: string;
   partySize: number;
-  status: "waiting" | "notified" | "confirmed" | "expired";
+  /** Backend values: waiting | offered | confirmed | expired | removed_by_staff */
+  status: "waiting" | "offered" | "confirmed" | "expired" | "removed_by_staff";
   position: number;
   addedAt: string;
   notes?: string;

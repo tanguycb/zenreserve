@@ -2,7 +2,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import {
   getSelectableRoles,
-  getStoredRole,
   isFirstEverLogin,
   markFirstLoginDone,
   setStoredRole,
@@ -12,11 +11,14 @@ import type { AppRole } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   BarChart2,
   ChefHat,
   Megaphone,
+  RefreshCw,
   ShieldCheck,
   Users,
+  Wifi,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -57,12 +59,23 @@ const FEATURE_KEYS = [
 
 export default function LoginPage() {
   const { t } = useTranslation(["dashboard", "shared"]);
-  const { isAuthenticated, isLoading, login, storedRole, loginStatus } =
-    useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    isInitError,
+    login,
+    forceReset,
+    clearAuthError,
+    storedRole,
+    loginStatus,
+    authError,
+    sessionWasCleared,
+  } = useAuth();
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<AppRole | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Track whether we've already handled the post-login redirect to avoid double fires
   const handledRef = useRef(false);
@@ -73,12 +86,37 @@ export default function LoginPage() {
     selectableRoleIds.includes(r.id),
   );
 
-  // Auto-dismiss login error after 5 seconds
+  // Auto-dismiss login error after 8 seconds
   useEffect(() => {
     if (!loginError) return;
-    const timer = setTimeout(() => setLoginError(null), 5000);
+    const timer = setTimeout(() => setLoginError(null), 8000);
     return () => clearTimeout(timer);
   }, [loginError]);
+
+  // Show stale session message ONLY on principal mismatch (different user on same device)
+  // Normal expired sessions are auto-cleared silently — no banner shown.
+  useEffect(() => {
+    if (sessionWasCleared) {
+      setLoginError(
+        "Een andere gebruiker heeft zich aangemeld op dit apparaat. Meld u opnieuw aan.",
+      );
+    }
+  }, [sessionWasCleared]);
+
+  // Sync authError from useAuth into local loginError state
+  useEffect(() => {
+    if (authError) {
+      setLoginError(authError);
+      setIsSubmitting(false);
+    }
+  }, [authError]);
+
+  // Show error and reset submitting state when II reports a login error
+  useEffect(() => {
+    if (loginStatus === "loginError") {
+      setIsSubmitting(false);
+    }
+  }, [loginStatus]);
 
   const isAuthenticatedRef = useRef(isAuthenticated);
   isAuthenticatedRef.current = isAuthenticated;
@@ -86,28 +124,15 @@ export default function LoginPage() {
   loginStatusRef.current = loginStatus;
 
   /**
-   * Unconditional mount reset — handles the browser-with-history bug:
-   * 1. Always reset isSubmitting so the button is never frozen on arrival.
-   * 2. If II reports no identity, clear stale localStorage role/first-login
-   *    so LoginGuard never redirects with ghost credentials.
+   * Unconditional mount reset — reset isSubmitting so the button is never
+   * frozen on arrival (e.g. back-navigation after a partial login attempt).
+   * DO NOT clear auth storage here — useAuth's stale-session check handles
+   * that after II has fully initialized. Clearing here races with II init
+   * and would wipe valid sessions on every page refresh.
    */
   useEffect(() => {
     setIsSubmitting(false);
     handledRef.current = false;
-    // Clear stale session when II has no identity
-    const identityPresent =
-      loginStatusRef.current === "success" && !!isAuthenticatedRef.current;
-    if (!identityPresent) {
-      const storedRoleValue = getStoredRole();
-      if (storedRoleValue !== null) {
-        try {
-          localStorage.removeItem("zenreserve_role");
-          localStorage.removeItem("zenreserve_first_login_done");
-        } catch {
-          // localStorage unavailable
-        }
-      }
-    }
   }, []); // intentionally runs once on mount only
 
   /**
@@ -122,6 +147,7 @@ export default function LoginPage() {
 
     // Reset submitting lock now that auth has resolved
     setIsSubmitting(false);
+    setLoginError(null);
 
     const firstLogin = isFirstEverLogin();
 
@@ -144,6 +170,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setLoginError(null);
+    clearAuthError();
     setIsSubmitting(true);
     // Reset handledRef so a fresh login cycle can navigate
     handledRef.current = false;
@@ -151,10 +178,40 @@ export default function LoginPage() {
       await login();
       // Navigation is handled in the useEffect above when isAuthenticated flips.
       // If login() resolves but isAuthenticated is still false (user cancelled II),
-      // reset the submitting state so the button is clickable again.
-      setIsSubmitting(false);
+      // show a friendly error and reset the submitting state.
+      if (!isAuthenticatedRef.current) {
+        // authError will be set by useAuth if there's a specific error
+        // Only set a generic fallback if no specific error came through
+        setTimeout(() => {
+          if (!isAuthenticatedRef.current) {
+            setLoginError((prev) =>
+              prev ? prev : t("dashboard:login.loginFailed"),
+            );
+            setIsSubmitting(false);
+          }
+        }, 200);
+      }
     } catch {
-      setLoginError(t("dashboard:login.loginFailed"));
+      // authError from useAuth will handle specific messages
+      // Fallback generic message only if authError didn't fire
+      setTimeout(() => {
+        setLoginError((prev) =>
+          prev ? prev : t("dashboard:login.loginFailed"),
+        );
+        setIsSubmitting(false);
+      }, 100);
+    }
+  };
+
+  /** Force a full session reset and re-prompt II login */
+  const handleForceReset = async () => {
+    setIsResetting(true);
+    setLoginError(null);
+    handledRef.current = false;
+    try {
+      await forceReset();
+    } finally {
+      setIsResetting(false);
       setIsSubmitting(false);
     }
   };
@@ -174,6 +231,12 @@ export default function LoginPage() {
   // The login button is busy only when actively submitting AND not yet authenticated
   // Once isAuthenticated flips to true, the useEffect above will navigate — don't keep button frozen
   const loginBusy = (isLoading || isSubmitting) && !isAuthenticated;
+
+  // Determine if error is a connectivity issue (show different icon)
+  const isConnectivityError =
+    loginError?.includes("server") ||
+    loginError?.includes("verbinding") ||
+    loginError?.includes("internet");
 
   return (
     <div
@@ -238,24 +301,65 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <Button
                   className="w-full h-12 text-base font-semibold gap-2"
-                  onClick={handleLogin}
-                  disabled={loginBusy}
+                  onClick={isInitError ? handleForceReset : handleLogin}
+                  disabled={loginBusy || isResetting}
                   data-ocid="login-btn"
-                  aria-label={t("dashboard:login.loginButton")}
+                  aria-label={
+                    isInitError
+                      ? "Pagina verversen"
+                      : t("dashboard:login.loginButton")
+                  }
                 >
-                  {loginBusy
-                    ? t("dashboard:login.loggingIn")
-                    : t("dashboard:login.loginButton")}
+                  {isResetting
+                    ? "Pagina wordt vernieuwd…"
+                    : loginBusy
+                      ? t("dashboard:login.loggingIn")
+                      : isInitError
+                        ? "Pagina verversen om in te loggen"
+                        : t("dashboard:login.loginButton")}
                 </Button>
 
                 {loginError && (
-                  <p
-                    className="text-sm text-destructive text-center"
+                  <div
+                    className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 space-y-2"
                     role="alert"
                     data-ocid="login-error"
                   >
-                    {loginError}
-                  </p>
+                    <div className="flex items-start gap-2">
+                      {isConnectivityError ? (
+                        <Wifi className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                      )}
+                      <p className="text-sm text-destructive leading-snug">
+                        {loginError}
+                      </p>
+                    </div>
+                    {/* Only show the session-reset button on a real principal mismatch
+                        (different user logged in on this device). For all other errors
+                        (cancelled popup, network issue, init error) the button is hidden
+                        so it never appears unconditionally on every visit. */}
+                    {sessionWasCleared && !isInitError && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 gap-1.5"
+                        onClick={handleForceReset}
+                        disabled={isResetting || loginBusy}
+                        data-ocid="login-retry-btn"
+                      >
+                        <RefreshCw
+                          className={cn(
+                            "h-3 w-3",
+                            isResetting && "animate-spin",
+                          )}
+                        />
+                        {isResetting
+                          ? "Sessie wordt gewist…"
+                          : "Sessie wissen en opnieuw aanmelden"}
+                      </Button>
+                    )}
+                  </div>
                 )}
 
                 <p className="text-center text-xs text-muted-foreground">

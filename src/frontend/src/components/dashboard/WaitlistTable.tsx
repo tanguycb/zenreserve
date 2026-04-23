@@ -56,7 +56,7 @@ function StatusBadge({
       cls: "bg-amber-500/15 text-amber-400 border-amber-500/25",
       dot: "bg-amber-400",
     },
-    notified: {
+    offered: {
       label: t("waitlist.statusNotified"),
       cls: "bg-blue-500/15 text-blue-400 border-blue-500/25",
       dot: "bg-blue-400",
@@ -67,6 +67,11 @@ function StatusBadge({
       dot: "bg-emerald-400",
     },
     expired: {
+      label: t("waitlist.statusExpired"),
+      cls: "bg-muted/60 text-muted-foreground border-border",
+      dot: "bg-muted-foreground/40",
+    },
+    removed_by_staff: {
       label: t("waitlist.statusExpired"),
       cls: "bg-muted/60 text-muted-foreground border-border",
       dot: "bg-muted-foreground/40",
@@ -181,7 +186,7 @@ export function WaitlistTable({
             <tr
               key={entry.id}
               className={`hover:bg-muted/10 transition-colors group ${
-                entry.status === "notified" ? "bg-blue-500/5" : ""
+                entry.status === "offered" ? "bg-blue-500/5" : ""
               }`}
               data-ocid="waitlist-row"
             >
@@ -257,25 +262,25 @@ export function WaitlistTable({
 
                   {/* Offer / Re-offer */}
                   {(entry.status === "waiting" ||
-                    entry.status === "notified") && (
+                    entry.status === "offered") && (
                     <Button
                       size="sm"
                       variant="outline"
                       className={`gap-1.5 text-xs h-7 px-2.5 hover-scale-xs ${
-                        entry.status === "notified"
+                        entry.status === "offered"
                           ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                           : "border-primary/30 text-primary hover:bg-primary/10"
                       }`}
                       onClick={() =>
                         onAction({
                           type:
-                            entry.status === "notified" ? "reoffer" : "offer",
+                            entry.status === "offered" ? "reoffer" : "offer",
                           entry,
                         })
                       }
                       disabled={isOffering}
                       data-ocid={
-                        entry.status === "notified"
+                        entry.status === "offered"
                           ? "reoffer-btn"
                           : "offer-spot-btn"
                       }
@@ -283,12 +288,12 @@ export function WaitlistTable({
                         name: entry.guestName,
                       })}
                     >
-                      {entry.status === "notified" ? (
+                      {entry.status === "offered" ? (
                         <RefreshCw className="h-3 w-3" />
                       ) : (
                         <Bell className="h-3 w-3" />
                       )}
-                      {entry.status === "notified"
+                      {entry.status === "offered"
                         ? t("waitlist.reofferButton")
                         : t("waitlist.offerButton")}
                     </Button>

@@ -1,4 +1,5 @@
 import { SkeletonTableRow } from "@/components/SkeletonCard";
+import { TableAssignmentOverlay } from "@/components/dashboard/TableAssignmentOverlay";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFloorState } from "@/hooks/useSeatingPlan";
 import type { Reservation, ReservationStatus } from "@/types";
-import { CalendarDays, Check, Eye, X } from "lucide-react";
+import { CalendarDays, Check, Eye, Pencil, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -89,9 +91,28 @@ export function ReservationList({
   onCancel,
   onStatusChange,
 }: ReservationListProps) {
-  const { t } = useTranslation(["dashboard"]);
+  const { t, i18n } = useTranslation(["dashboard"]);
+  const lang = i18n.language?.slice(0, 2) ?? "nl";
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [assignTarget, setAssignTarget] = useState<Reservation | null>(null);
+
+  const { data: floorState } = useFloorState();
+
+  function getAssignedTableName(res: Reservation): string | null {
+    if (!floorState) return res.tableNumber ? `T${res.tableNumber}` : null;
+    const t = floorState.tables.find((tbl) => tbl.reservationId === res.id);
+    if (t) return t.name.replace(/^Tafel\s*/i, "T");
+    if (res.tableNumber) return `T${res.tableNumber}`;
+    return null;
+  }
+
+  const tooltipAssign =
+    lang === "en"
+      ? "Assign table"
+      : lang === "fr"
+        ? "Assigner table"
+        : "Tafel toewijzen";
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -199,9 +220,9 @@ export function ReservationList({
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell"
+                className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell"
               >
-                Tafel
+                {t("dashboard:reservations.columns.table", "Tafel")}
               </th>
               <th
                 scope="col"
@@ -237,7 +258,7 @@ export function ReservationList({
                 <td colSpan={8}>
                   <div
                     className="flex flex-col items-center justify-center py-16 text-center"
-                    data-ocid="empty-reservations"
+                    data-ocid="reservations.empty_state"
                   >
                     <CalendarDays
                       className="h-10 w-10 text-muted-foreground/30 mb-3"
@@ -253,184 +274,225 @@ export function ReservationList({
                 </td>
               </tr>
             ) : (
-              sorted.map((res) => (
-                <tr
-                  key={res.id}
-                  className="border-b border-border hover:bg-muted/20 transition-colors group"
-                  data-ocid="reservation-row"
-                >
-                  <td className="px-4 py-3 text-foreground whitespace-nowrap text-sm">
-                    {formatDate(res.date)}
-                  </td>
-                  <td className="px-4 py-3 text-foreground whitespace-nowrap tabular-nums font-medium">
-                    {res.time}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {/* Gradient avatar sized 36px */}
-                      <div
-                        className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${AVATAR_COLOR[res.status] ?? "bg-muted text-muted-foreground"}`}
-                      >
-                        <span className="text-xs font-bold">
-                          {res.guestName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <button
-                          type="button"
-                          className="text-sm font-semibold text-foreground truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline text-left"
-                          onClick={() => onView(res)}
-                          aria-label={t("dashboard:reservations.actions.view", {
-                            name: res.guestName,
-                          })}
+              sorted.map((res, rowIdx) => {
+                const assignedTableName = getAssignedTableName(res);
+                return (
+                  <tr
+                    key={res.id}
+                    className="border-b border-border hover:bg-muted/20 transition-colors group"
+                    data-ocid={`reservations.item.${rowIdx + 1}`}
+                  >
+                    <td className="px-4 py-3 text-foreground whitespace-nowrap text-sm">
+                      {formatDate(res.date)}
+                    </td>
+                    <td className="px-4 py-3 text-foreground whitespace-nowrap tabular-nums font-medium">
+                      {res.time}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${AVATAR_COLOR[res.status] ?? "bg-muted text-muted-foreground"}`}
                         >
-                          {res.guestName}
-                        </button>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {res.guestEmail}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-foreground text-center tabular-nums font-medium">
-                    {res.partySize}
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    {res.tableNumber ? (
-                      <span className="text-xs font-medium text-foreground bg-muted px-2 py-0.5 rounded-md">
-                        Tafel {res.tableNumber}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">
-                        Niet toegewezen
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground truncate max-w-[140px] hidden md:table-cell text-xs">
-                    {res.experienceName ? (
-                      <span className="text-purple-400">
-                        ✨ {res.experienceName}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {/* Inline status dropdown */}
-                    <Select
-                      value={res.status}
-                      onValueChange={(val) =>
-                        onStatusChange(res.id, val as ReservationStatus)
-                      }
-                    >
-                      <SelectTrigger
-                        className="h-7 text-xs border-border bg-transparent w-auto min-w-[130px] focus:ring-1 focus:ring-primary"
-                        data-ocid="status-dropdown"
-                        aria-label={`Status voor ${res.guestName}`}
-                      >
-                        <SelectValue>
-                          <StatusBadge status={res.status} />
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border z-50">
-                        {ALL_STATUSES.map((s) => (
-                          <SelectItem
-                            key={s}
-                            value={s}
-                            className="text-foreground focus:bg-muted text-xs"
-                          >
-                            {STATUS_LABELS_NL[s] ?? s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onView(res);
-                            }}
+                          <span className="text-xs font-bold">
+                            {res.guestName
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            className="text-sm font-semibold text-foreground truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline text-left"
+                            onClick={() => onView(res)}
                             aria-label={t(
                               "dashboard:reservations.actions.view",
                               { name: res.guestName },
                             )}
-                            data-ocid="action-view"
                           >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
+                            {res.guestName}
+                          </button>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {res.guestEmail}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-foreground text-center tabular-nums font-medium">
+                      {res.partySize}
+                    </td>
+
+                    {/* Table column — quick assign button */}
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {assignedTableName ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAssignTarget(res);
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-foreground bg-muted px-2 py-1 rounded-md hover:bg-primary/10 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              aria-label={tooltipAssign}
+                              data-ocid={`reservations.assign_button.${rowIdx + 1}`}
+                            >
+                              {assignedTableName}
+                              <Pencil className="h-2.5 w-2.5 opacity-60" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAssignTarget(res);
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground border border-dashed border-border px-2 py-1 rounded-md hover:border-primary/50 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              aria-label={tooltipAssign}
+                              data-ocid={`reservations.assign_button.${rowIdx + 1}`}
+                            >
+                              <Plus className="h-2.5 w-2.5" />
+                              {lang === "en"
+                                ? "Table"
+                                : lang === "fr"
+                                  ? "Table"
+                                  : "Tafel"}
+                            </button>
+                          )}
                         </TooltipTrigger>
-                        <TooltipContent>Bekijken</TooltipContent>
+                        <TooltipContent>{tooltipAssign}</TooltipContent>
                       </Tooltip>
+                    </td>
 
-                      {res.status !== "cancelled" &&
-                        res.status !== "completed" &&
-                        res.status !== "seated" && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-primary/70 hover:text-primary hover:bg-primary/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onCheckIn(res);
-                                }}
-                                aria-label={t(
-                                  "dashboard:reservations.actions.checkIn",
-                                  { name: res.guestName },
-                                )}
-                                data-ocid="action-checkin"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Inchecken</TooltipContent>
-                          </Tooltip>
-                        )}
-
-                      {res.status !== "cancelled" && (
+                    <td className="px-4 py-3 text-muted-foreground truncate max-w-[140px] hidden md:table-cell text-xs">
+                      {res.experienceName ? (
+                        <span className="text-purple-400">
+                          ✨ {res.experienceName}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Select
+                        value={res.status}
+                        onValueChange={(val) =>
+                          onStatusChange(res.id, val as ReservationStatus)
+                        }
+                      >
+                        <SelectTrigger
+                          className="h-7 text-xs border-border bg-transparent w-auto min-w-[130px] focus:ring-1 focus:ring-primary"
+                          data-ocid={`reservations.status_dropdown.${rowIdx + 1}`}
+                          aria-label={`Status voor ${res.guestName}`}
+                        >
+                          <SelectValue>
+                            <StatusBadge status={res.status} />
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border z-50">
+                          {ALL_STATUSES.map((s) => (
+                            <SelectItem
+                              key={s}
+                              value={s}
+                              className="text-foreground focus:bg-muted text-xs"
+                            >
+                              {STATUS_LABELS_NL[s] ?? s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onCancel(res);
+                                onView(res);
                               }}
                               aria-label={t(
-                                "dashboard:reservations.actions.cancel",
+                                "dashboard:reservations.actions.view",
                                 { name: res.guestName },
                               )}
-                              data-ocid="action-cancel"
+                              data-ocid={`reservations.view_button.${rowIdx + 1}`}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Annuleren</TooltipContent>
+                          <TooltipContent>Bekijken</TooltipContent>
                         </Tooltip>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+
+                        {res.status !== "cancelled" &&
+                          res.status !== "completed" &&
+                          res.status !== "seated" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-primary/70 hover:text-primary hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCheckIn(res);
+                                  }}
+                                  aria-label={t(
+                                    "dashboard:reservations.actions.checkIn",
+                                    { name: res.guestName },
+                                  )}
+                                  data-ocid={`reservations.checkin_button.${rowIdx + 1}`}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Inchecken</TooltipContent>
+                            </Tooltip>
+                          )}
+
+                        {res.status !== "cancelled" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCancel(res);
+                                }}
+                                aria-label={t(
+                                  "dashboard:reservations.actions.cancel",
+                                  { name: res.guestName },
+                                )}
+                                data-ocid={`reservations.cancel_button.${rowIdx + 1}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Annuleren</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Table assignment overlay */}
+      <TableAssignmentOverlay
+        reservation={assignTarget}
+        open={assignTarget !== null}
+        onClose={() => setAssignTarget(null)}
+      />
     </TooltipProvider>
   );
 }

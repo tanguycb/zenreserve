@@ -20,9 +20,19 @@ module {
   };
 
   /// Capacity limit for a named zone (e.g. "Terras", "Binnen", "Bar")
+  /// Legacy type kept for backwards-compat with existing API surface
   public type ZoneCapacity = {
     zoneName : Text;
     maxGuests : Nat;
+  };
+
+  /// Full zone definition with id, color, and optional floor-plan boundaries
+  public type Zone = {
+    id       : Text;   // unique slug, e.g. "binnen-1"
+    name     : Text;
+    color    : Text;   // hex color, e.g. "#22C55E"
+    maxGuests : Nat;
+    boundaries : ?Text; // optional JSON string for visual boundaries on the floor plan
   };
 
   /// A table type with its seating capacity and how many of that type exist
@@ -68,6 +78,7 @@ module {
     requireAllergies : Bool;
     requireDietPreferences : Bool;
     customQuestions : [CustomQuestion];
+    showBabiesChildren : Bool; // whether babies/children fields are shown in the form
   };
 
   /// Widget & branding settings
@@ -124,6 +135,7 @@ module {
 
     // Capacity & occupancy
     zones : [ZoneCapacity];
+    zoneDefs : [Zone];         // full zone definitions (with id, color, boundaries)
     tableTypes : [TableType];
     occupancySettings : ?OccupancySettings;
 

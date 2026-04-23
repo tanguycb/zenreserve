@@ -85,15 +85,16 @@ module {
     };
   };
 
-  /// Remove a waitlist entry entirely.
+  /// Soft-delete a waitlist entry by setting its status to #removed_by_staff.
+  /// The entry is preserved in state for audit trail purposes.
   public func removeWaitlistEntry(
     waitlist : Map.Map<CommonTypes.WaitlistId, WaitlistTypes.WaitlistEntry>,
     id : CommonTypes.WaitlistId,
   ) : { #ok : (); #err : Text } {
     switch (waitlist.get(id)) {
       case null { #err("Waitlist entry not found") };
-      case (?_) {
-        waitlist.remove(id);
+      case (?entry) {
+        waitlist.add(id, { entry with status = #removed_by_staff });
         #ok(());
       };
     };

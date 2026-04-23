@@ -1,4 +1,4 @@
-// Version: 1.0.0
+// Version: 3.0.0
 type AISeatingSuggestion__717321920 =
   {
     confidence : Float;
@@ -9,6 +9,19 @@ type AISeatingSuggestion__717321920 =
     suggestedTableIds : [Text];
     suggestionId : Text;
     zonePreference : ?Text
+  };
+type AuditLogEntry__931110070 =
+  {
+    action : Text;
+    callerName : Text;
+    callerPrincipal : Text;
+    callerRole : Text;
+    id : Text;
+    newValue : ?Text;
+    oldValue : ?Text;
+    page : Text;
+    summary : Text;
+    timestamp : Int
   };
 type BrandingSettings__406196753 =
   {
@@ -28,25 +41,43 @@ type CustomQuestion__282271811 =
     questionType : {#dropdown; #text};
     required : Bool
   };
+type Data__159895909<T> = {var count : Nat__490723111; elements : [var ?T]};
 type Data__791452850<K, V> =
   {var count : Nat__490723111; kvs : [var ?(K, V)]};
 type DayOfWeek__249784526 = Nat;
+type EmailTemplateType__727241430 = Text;
+type EmailTemplate__460153268 =
+  {
+    accentColor : Text;
+    backgroundColor : Text;
+    bodyHtml : Text;
+    footer : Text;
+    heading : Text;
+    id : Text;
+    logoUrl : Text;
+    subject : Text;
+    templateType : EmailTemplateType__727241430
+  };
 type ExperienceId__76814950 = Text;
 type Experience__407200578 =
   {
+    dayOfWeek : ?[Nat];
     description : Text;
     id : ExperienceId__76814950;
     isActive : Bool;
     maxCapacity : Nat;
     name : Text;
-    pricePerPerson : Nat
+    pricePerPerson : Nat;
+    required : Bool;
+    serviceIds : ?[Text]
   };
 type GuestFormSettings__142853507 =
   {
     customQuestions : [CustomQuestion__282271811];
     requireAllergies : Bool;
     requireDietPreferences : Bool;
-    requirePhone : Bool
+    requirePhone : Bool;
+    showBabiesChildren : Bool
   };
 type GuestId__80888198 = Text;
 type Guest__1013009172 =
@@ -68,9 +99,19 @@ type IntegrationSettings__540879812 =
     stripeEnabled : Bool;
     stripePublicKey : Text
   };
+type Internal__667636161<T> =
+  {children : [var ?Node__92254746<T>]; data : Data__159895909<T>};
 type Internal__8484328<K, V> =
   {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__520550824<T> = {data : Data__159895909<T>};
 type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
 type Map__158565046<K, V> = Map__297112838<K, V>;
 type Map__297112838<K, V> =
   {var root : Node__46230540<K, V>; var size : Nat__490723111};
@@ -79,6 +120,8 @@ type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
 type Node__46230540<K, V> =
   {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Node__92254746<T> =
+  {#internal : Internal__667636161<T>; #leaf : Leaf__520550824<T>};
 type NotificationSettings__1023783760 =
   {
     reminderHoursBefore : [Nat];
@@ -92,6 +135,27 @@ type OccupancySettings__1007537574 =
     globalCeilingPercent : Nat;
     maxGuestsPerReservationMax : Nat;
     maxGuestsPerReservationMin : Nat
+  };
+type OldExperience__658683408 =
+  {
+    description : Text;
+    id : ExperienceId__76814950;
+    isActive : Bool;
+    maxCapacity : Nat;
+    name : Text;
+    pricePerPerson : Nat;
+    required : Bool
+  };
+type ReservationChange__48822894 =
+  {
+    changedBy : Text;
+    changedByName : Text;
+    changedByRole : Text;
+    field : Text;
+    id : Text;
+    newValue : Text;
+    oldValue : Text;
+    timestamp : Int
   };
 type ReservationId__879094814 = Text;
 type ReservationRules__627802212 =
@@ -119,16 +183,21 @@ type ReservationStatus__703841619 =
   };
 type Reservation__791493290 =
   {
+    changes : [ReservationChange__48822894];
     createdAt : Timestamp__301639476;
     date : Text;
     experienceId : ?ExperienceId__76814950;
     guestId : GuestId__80888198;
     id : ReservationId__879094814;
+    notes : ?Text;
     partySize : Nat;
     specialRequests : ?Text;
     status : ReservationStatus__703841619;
     stripePaymentIntentId : ?Text;
-    time : Text
+    tableId : ?Text;
+    time : Text;
+    updatedAt : Timestamp__301639476;
+    zone : ?Text
   };
 type RestaurantExtendedConfig__9983377 =
   {
@@ -152,8 +221,12 @@ type RestaurantExtendedConfig__9983377 =
     tableTypes : [TableType__60054991];
     timezone : Text;
     totalSeatsPerSlot : Nat;
+    zoneDefs : [Zone__801146183];
     zones : [ZoneCapacity__120328896]
   };
+type ReviewRequestDelay__152466875 = {#hour1; #hour2; #hour24};
+type ReviewRequestSettings__333181768 =
+  {delay : ReviewRequestDelay__152466875; enabled : Bool; message : Text};
 type SeasonalPeriod__708339519 =
   {
     activatedZones : [Text];
@@ -181,6 +254,14 @@ type SuggestionFeedback__1052244024 =
     rejectionReason : ?Text;
     suggestionId : Text
   };
+type TableGroupDefinition__990438677 =
+  {
+    description : Text;
+    id : Text;
+    name : Text;
+    tableIds : [Text];
+    totalCapacity : Nat
+  };
 type TableId__109544317 = Text;
 type TableStatus__235044297 = {#empty; #occupied; #reserved; #unavailable};
 type TableType__60054991 = {capacity : Nat; count : Nat; typeName : Text};
@@ -197,7 +278,8 @@ type Table__1039298634 =
     seatCount : ?Nat;
     status : TableStatus__235044297;
     x : Int;
-    y : Int
+    y : Int;
+    zone : ?Text
   };
 type TeamMember__16370082 =
   {
@@ -223,13 +305,48 @@ type WaitlistEntry__155364746 =
     status : WaitlistStatus__247298350
   };
 type WaitlistId__11847903 = Text;
-type WaitlistStatus__247298350 = {#confirmed; #expired; #offered; #waiting};
+type WaitlistStatus__247298350 =
+  {#confirmed; #expired; #offered; #removed_by_staff; #waiting};
 type ZoneCapacity__120328896 = {maxGuests : Nat; zoneName : Text};
-actor {
+type Zone__801146183 =
+  {boundaries : ?Text; color : Text; id : Text; maxGuests : Nat; name : Text};
+actor ({
+  stable AUDIT_MAX_ENTRIES : Nat;
+  stable DASHBOARD_RATE_LIMIT_MAX : Nat;
+  stable DASHBOARD_RATE_LIMIT_WINDOW_NS : Int;
+  stable ONE_HOUR_NS : Int;
+  stable SETTINGS_MAX_AUDIT_ENTRIES : Nat;
+  stable TEAM_MAX_AUDIT_ENTRIES : Nat;
+  stable WAITLIST_RATE_LIMIT_ANON : Nat;
+  stable WAITLIST_RATE_LIMIT_PER_CALLER : Nat;
+  stable WIDGET_RATE_LIMIT_MAX : Nat;
+  stable WIDGET_RATE_LIMIT_WINDOW_NS : Int;
   stable accessControlState :
     {
       var adminAssigned : Bool;
       userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable auditLog :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?AuditLogEntry__931110070]];
+      var elementIndex : Nat__490723111
+    };
+  stable auditLogCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable dashboardRateLimitMap :
+    {
+      var root : Node__46230540<Text, List__415060402<Int>>;
+      var size : Nat__490723111
+    };
+  stable emailTemplateStore :
+    {
+      var root : Node__46230540<Text, EmailTemplate__460153268>;
+      var size : Nat__490723111
     };
   stable experienceCounter :
     {
@@ -237,11 +354,8 @@ actor {
       var blocks : [var [var ?Nat]];
       var elementIndex : Nat__490723111
     };
-  stable experiences :
-    {
-      var root : Node__46230540<ExperienceId__76814950, Experience__407200578>;
-      var size : Nat__490723111
-    };
+  in experiences :
+    Map__605269027<ExperienceId__76814950, OldExperience__658683408>;
   stable extendedConfig :
     {
       var blockIndex : Nat__490723111;
@@ -254,10 +368,21 @@ actor {
       var blocks : [var [var ?Nat]];
       var elementIndex : Nat__490723111
     };
+  stable guestEmailIndex :
+    {
+      var root : Node__46230540<Text, GuestId__80888198>;
+      var size : Nat__490723111
+    };
   stable guests :
     {
       var root : Node__46230540<GuestId__80888198, Guest__1013009172>;
       var size : Nat__490723111
+    };
+  stable reservationChangeCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
     };
   stable reservationCounter :
     {
@@ -284,6 +409,9 @@ actor {
                    }]];
       var elementIndex : Nat__490723111
     };
+  stable reviewSentSet :
+    {var root : Node__92254746<Text>; var size : Nat__490723111};
+  stable reviewSettings : {var value : ReviewRequestSettings__333181768};
   stable seasonalPeriods :
     {
       var blockIndex : Nat__490723111;
@@ -305,6 +433,18 @@ actor {
     {
       var blockIndex : Nat__490723111;
       var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableGroupDefCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableGroupDefinitions :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?TableGroupDefinition__990438677]];
       var elementIndex : Nat__490723111
     };
   stable tableWeights :
@@ -334,5 +474,187 @@ actor {
       var blockIndex : Nat__490723111;
       var blocks : [var [var ?Nat]];
       var elementIndex : Nat__490723111
+    };
+  stable waitlistRateLimitMap :
+    {var root : Node__46230540<Text, (Nat, Int)>; var size : Nat__490723111};
+  stable widgetRateLimitMap :
+    {
+      var root : Node__46230540<Text, List__415060402<Int>>;
+      var size : Nat__490723111
     }
-};
+}, {
+  stable AUDIT_MAX_ENTRIES : Nat;
+  stable DASHBOARD_RATE_LIMIT_MAX : Nat;
+  stable DASHBOARD_RATE_LIMIT_WINDOW_NS : Int;
+  stable ONE_HOUR_NS : Int;
+  stable SETTINGS_MAX_AUDIT_ENTRIES : Nat;
+  stable TEAM_MAX_AUDIT_ENTRIES : Nat;
+  stable WAITLIST_RATE_LIMIT_ANON : Nat;
+  stable WAITLIST_RATE_LIMIT_PER_CALLER : Nat;
+  stable WIDGET_RATE_LIMIT_MAX : Nat;
+  stable WIDGET_RATE_LIMIT_WINDOW_NS : Int;
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable auditLog :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?AuditLogEntry__931110070]];
+      var elementIndex : Nat__490723111
+    };
+  stable auditLogCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable dashboardRateLimitMap :
+    {
+      var root : Node__46230540<Text, List__415060402<Int>>;
+      var size : Nat__490723111
+    };
+  stable emailTemplateStore :
+    {
+      var root : Node__46230540<Text, EmailTemplate__460153268>;
+      var size : Nat__490723111
+    };
+  stable experienceCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable experiences :
+    {
+      var root : Node__46230540<ExperienceId__76814950, Experience__407200578>;
+      var size : Nat__490723111
+    };
+  stable extendedConfig :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?RestaurantExtendedConfig__9983377]];
+      var elementIndex : Nat__490723111
+    };
+  stable guestCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable guestEmailIndex :
+    {
+      var root : Node__46230540<Text, GuestId__80888198>;
+      var size : Nat__490723111
+    };
+  stable guests :
+    {
+      var root : Node__46230540<GuestId__80888198, Guest__1013009172>;
+      var size : Nat__490723111
+    };
+  stable reservationChangeCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable reservationCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable reservations :
+    {
+      var root :
+        Node__46230540<ReservationId__879094814, Reservation__791493290>;
+      var size : Nat__490723111
+    };
+  stable restaurantConfig :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks :
+        [var [var ?{
+                     closingHour : Nat;
+                     openingHour : Nat;
+                     restaurantName : Text;
+                     slotIntervalMinutes : Nat;
+                     totalSeatsPerSlot : Nat
+                   }]];
+      var elementIndex : Nat__490723111
+    };
+  stable reviewSentSet :
+    {var root : Node__92254746<Text>; var size : Nat__490723111};
+  stable reviewSettings : {var value : ReviewRequestSettings__333181768};
+  stable seasonalPeriods :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?SeasonalPeriod__708339519]];
+      var elementIndex : Nat__490723111
+    };
+  stable suggestionFeedback :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?SuggestionFeedback__1052244024]];
+      var elementIndex : Nat__490723111
+    };
+  stable suggestionHistory :
+    {
+      var root : Node__46230540<Text, AISeatingSuggestion__717321920>;
+      var size : Nat__490723111
+    };
+  stable tableCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableGroupDefCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableGroupDefinitions :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?TableGroupDefinition__990438677]];
+      var elementIndex : Nat__490723111
+    };
+  stable tableWeights :
+    {
+      var root : Node__46230540<Text, TableWeight__1069473004>;
+      var size : Nat__490723111
+    };
+  stable tables :
+    {
+      var root : Node__46230540<TableId__109544317, Table__1039298634>;
+      var size : Nat__490723111
+    };
+  stable teamStore :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?TeamMember__16370082]];
+      var elementIndex : Nat__490723111
+    };
+  stable waitlist :
+    {
+      var root :
+        Node__46230540<WaitlistId__11847903, WaitlistEntry__155364746>;
+      var size : Nat__490723111
+    };
+  stable waitlistCounter :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Nat]];
+      var elementIndex : Nat__490723111
+    };
+  stable waitlistRateLimitMap :
+    {var root : Node__46230540<Text, (Nat, Int)>; var size : Nat__490723111};
+  stable widgetRateLimitMap :
+    {
+      var root : Node__46230540<Text, List__415060402<Int>>;
+      var size : Nat__490723111
+    }
+}) ;

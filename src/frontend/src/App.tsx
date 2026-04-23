@@ -1,5 +1,4 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { SkeletonCard } from "@/components/SkeletonCard";
 import { WidgetLayout } from "@/components/WidgetLayout";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -10,14 +9,64 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { Suspense, lazy } from "react";
+import { Component, Suspense, lazy } from "react";
+import type { ErrorInfo, ReactNode } from "react";
+
+// ── Chunk Error Boundary ──────────────────────────────────────────────────────
+/**
+ * Catches failures from lazy-loaded route chunks (e.g. "Importing a module
+ * script failed" when a JS asset is not served correctly on the IC).
+ * Shows a simple reload prompt instead of a blank / crashed screen.
+ */
+interface ChunkErrorState {
+  hasError: boolean;
+}
+class ChunkErrorBoundary extends Component<
+  { children: ReactNode },
+  ChunkErrorState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(): ChunkErrorState {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Only log — never rethrow; keep the app alive.
+    console.error("[ChunkErrorBoundary]", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="dark min-h-screen bg-background flex items-center justify-center p-8">
+          <div className="text-center space-y-4 max-w-sm">
+            <p className="text-foreground font-semibold">
+              De pagina kon niet worden geladen.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Ververs de pagina om het opnieuw te proberen.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Pagina verversen
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── Lazy pages ────────────────────────────────────────────────────────────────
 const WidgetPage = lazy(() => import("@/pages/WidgetPage"));
 const DashboardHome = lazy(() => import("@/pages/DashboardHome"));
 const ReservationsPage = lazy(() => import("@/pages/ReservationsPage"));
 const GuestsPage = lazy(() => import("@/pages/GuestsPage"));
-const ExperiencesPage = lazy(() => import("@/pages/ExperiencesPage"));
 const WaitlistPage = lazy(() => import("@/pages/WaitlistPage"));
 const SeatingPlanPage = lazy(() => import("@/pages/SeatingPlanPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -53,27 +102,60 @@ const IntegrationsSettingsPage = lazy(
 const SeasonalSettingsPage = lazy(
   () => import("@/pages/settings/SeasonalSettingsPage"),
 );
+const ZonesSettingsPage = lazy(
+  () => import("@/pages/settings/ZonesSettingsPage"),
+);
+const SettingsExperiencesPage = lazy(
+  () => import("@/pages/settings/SettingsExperiencesPage"),
+);
+const SeatingPlanSettingsPage = lazy(
+  () => import("@/pages/settings/SeatingPlanSettingsPage"),
+);
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
+const AuditLogPage = lazy(() => import("@/pages/AuditLogPage"));
+
+// ── Auth loading spinner ──────────────────────────────────────────────────────
+/**
+ * Full-screen loading spinner shown while Internet Identity is resolving.
+ * Used by both DashboardGuard and LoginGuard during the async init window.
+ * A spinner (not a skeleton) is intentional — it clearly communicates that
+ * the app is checking login state, not rendering content.
+ */
+function AuthLoadingSpinner() {
+  return (
+    <div className="dark min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">
+          Sessie wordt gecontroleerd…
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ── Auth guard wrapper ────────────────────────────────────────────────────────
 /**
  * Guards all /dashboard/* routes except /dashboard/login.
- * - While II is resolving: show skeleton loader.
- * - Not authenticated: redirect to /dashboard/login.
- * - Authenticated (with or without stored role): render DashboardLayout.
- *   DashboardLayout itself handles the missing-role case by showing RolePickerInline.
+ *
+ * CRITICAL — isAuthReady gate:
+ * The InternetIdentityProvider performs an async initialization to restore a
+ * session from IndexedDB. During this window, loginStatus === "initializing"
+ * and isAuthReady is false. We MUST NOT redirect until isAuthReady is true —
+ * doing so causes a race condition where a valid session appears as
+ * unauthenticated because the async check hasn't completed yet.
+ *
+ * After init, loginStatus becomes "idle" (session restored) or stays as an
+ * error state. isAuthenticated accounts for BOTH the "success" case (fresh
+ * login) and the "idle" case (session restored on refresh).
  */
 function DashboardGuard() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="dark min-h-screen bg-background flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-4">
-          <SkeletonCard lines={4} />
-        </div>
-      </div>
-    );
+  // Block all routing until II has finished its async init.
+  // This is the ONLY correct way to prevent premature redirects on refresh.
+  if (!isAuthReady) {
+    return <AuthLoadingSpinner />;
   }
 
   if (!isAuthenticated) {
@@ -92,18 +174,15 @@ function DashboardGuard() {
  * Only redirects to the dashboard when II confirms the identity is active
  * AND a stored role exists. If isAuthenticated is false (II says not logged in),
  * ALWAYS show the login page — never redirect based on stale localStorage alone.
+ *
+ * Uses the same isAuthReady gate as DashboardGuard.
  */
 function LoginGuard() {
-  const { isAuthenticated, isLoading, storedRole } = useAuth();
+  const { isAuthenticated, isAuthReady, storedRole } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="dark min-h-screen bg-background flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-4">
-          <SkeletonCard lines={4} />
-        </div>
-      </div>
-    );
+  // Block all routing until II has finished its async init.
+  if (!isAuthReady) {
+    return <AuthLoadingSpinner />;
   }
 
   // Only redirect when II identity is confirmed AND a role is stored.
@@ -113,9 +192,11 @@ function LoginGuard() {
   }
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <LoginPage />
-    </Suspense>
+    <ChunkErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <LoginPage />
+      </Suspense>
+    </ChunkErrorBoundary>
   );
 }
 
@@ -123,18 +204,18 @@ function LoginGuard() {
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-[40vh]">
-      <div className="w-full max-w-md space-y-3 p-4">
-        <SkeletonCard lines={3} />
-      </div>
+      <div className="h-8 w-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
     </div>
   );
 }
 
 function withSuspense(Component: React.ComponentType) {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Component />
-    </Suspense>
+    <ChunkErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Component />
+      </Suspense>
+    </ChunkErrorBoundary>
   );
 }
 
@@ -180,12 +261,6 @@ const guestsRoute = createRoute({
   component: () => withSuspense(GuestsPage),
 });
 
-const experiencesRoute = createRoute({
-  getParentRoute: () => dashboardParentRoute,
-  path: "/experiences",
-  component: () => withSuspense(ExperiencesPage),
-});
-
 const waitlistRoute = createRoute({
   getParentRoute: () => dashboardParentRoute,
   path: "/waitlist",
@@ -202,6 +277,12 @@ const analyticsRoute = createRoute({
   getParentRoute: () => dashboardParentRoute,
   path: "/analytics",
   component: () => withSuspense(AnalyticsPage),
+});
+
+const auditLogRoute = createRoute({
+  getParentRoute: () => dashboardParentRoute,
+  path: "/audit-log",
+  component: () => withSuspense(AuditLogPage),
 });
 
 // Settings parent — renders SettingsPage (sidebar layout)
@@ -278,6 +359,24 @@ const settingsSeasonalRoute = createRoute({
   component: () => withSuspense(SeasonalSettingsPage),
 });
 
+const settingsZonesRoute = createRoute({
+  getParentRoute: () => settingsParentRoute,
+  path: "/zones",
+  component: () => withSuspense(ZonesSettingsPage),
+});
+
+const settingsExperiencesRoute = createRoute({
+  getParentRoute: () => settingsParentRoute,
+  path: "/experiences",
+  component: () => withSuspense(SettingsExperiencesPage),
+});
+
+const settingsSeatingPlanRoute = createRoute({
+  getParentRoute: () => settingsParentRoute,
+  path: "/seating-plan",
+  component: () => withSuspense(SeatingPlanSettingsPage),
+});
+
 // Login route — outside auth guard, with smart redirect for already-logged-in users
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -301,10 +400,10 @@ const routeTree = rootRoute.addChildren([
     dashboardIndexRoute,
     reservationsRoute,
     guestsRoute,
-    experiencesRoute,
     waitlistRoute,
     seatingRoute,
     analyticsRoute,
+    auditLogRoute,
     settingsParentRoute.addChildren([
       settingsIndexRoute,
       settingsGeneralRoute,
@@ -317,6 +416,9 @@ const routeTree = rootRoute.addChildren([
       settingsIntegrationsRoute,
       settingsTeamRoute,
       settingsSeasonalRoute,
+      settingsZonesRoute,
+      settingsExperiencesRoute,
+      settingsSeatingPlanRoute,
     ]),
   ]),
 ]);

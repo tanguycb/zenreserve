@@ -89,8 +89,37 @@ export class ExternalBlob {
         return this;
     }
 }
-export type DayOfWeek = bigint;
+export interface Experience {
+    id: ExperienceId;
+    maxCapacity: bigint;
+    dayOfWeek?: Array<bigint>;
+    name: string;
+    pricePerPerson: bigint;
+    description: string;
+    isActive: boolean;
+    serviceIds?: Array<string>;
+    required: boolean;
+}
+export interface EmailTemplate {
+    id: string;
+    backgroundColor: string;
+    subject: string;
+    heading: string;
+    templateType: EmailTemplateType;
+    accentColor: string;
+    logoUrl: string;
+    bodyHtml: string;
+    footer: string;
+}
+export interface Zone {
+    id: string;
+    boundaries?: string;
+    name: string;
+    color: string;
+    maxGuests: bigint;
+}
 export type Timestamp = bigint;
+export type DayOfWeek = bigint;
 export interface IntegrationSettings {
     mollieEnabled: boolean;
     calendarSyncEnabled: boolean;
@@ -104,9 +133,11 @@ export interface KPIs {
     avgPartySize: bigint;
     occupancyPct: bigint;
     todayCoversPerService: Array<[string, bigint]>;
+    waitlistCount: bigint;
     todayReservationCount: bigint;
     noShowCount: bigint;
 }
+export type EmailTemplateType = string;
 export interface ZoneCapacity {
     zoneName: string;
     maxGuests: bigint;
@@ -116,7 +147,20 @@ export interface GuestFormSettings {
     requireAllergies: boolean;
     requireDietPreferences: boolean;
     requirePhone: boolean;
+    showBabiesChildren: boolean;
     customQuestions: Array<CustomQuestion>;
+}
+export interface ReviewRequestSettings {
+    enabled: boolean;
+    message: string;
+    delay: ReviewRequestDelay;
+}
+export interface TableGroupDefinition {
+    id: string;
+    name: string;
+    tableIds: Array<string>;
+    description: string;
+    totalCapacity: bigint;
 }
 export interface TableAssignment {
     assignedAt: Timestamp;
@@ -133,6 +177,10 @@ export interface BrandingSettings {
     defaultLanguage: string;
     welcomeText: string;
 }
+export interface AvailableSlotsResponse {
+    fixedClosingDays: Array<bigint>;
+    slots: Array<TimeSlot>;
+}
 export interface RestaurantExtendedConfig {
     timezone: string;
     integrations: IntegrationSettings;
@@ -144,6 +192,7 @@ export interface RestaurantExtendedConfig {
     zones: Array<ZoneCapacity>;
     tableTypes: Array<TableType>;
     reservationRules: ReservationRules;
+    zoneDefs: Array<Zone>;
     currency: string;
     restaurantName: string;
     closingHour: bigint;
@@ -194,6 +243,7 @@ export interface NotificationSettings {
 export interface ReservationFilter {
     status?: ReservationStatus;
     date?: string;
+    time?: string;
     guestId?: GuestId;
 }
 export interface TableType {
@@ -210,8 +260,13 @@ export interface Reservation {
     specialRequests?: string;
     createdAt: Timestamp;
     time: string;
+    zone?: string;
+    tableId?: string;
+    updatedAt: Timestamp;
+    notes?: string;
     stripePaymentIntentId?: string;
     partySize: bigint;
+    changes: Array<ReservationChange>;
     guestId: GuestId;
 }
 export interface CustomQuestion {
@@ -225,6 +280,18 @@ export interface ClosingDay {
     date: string;
     serviceId?: string;
     reason: string;
+}
+export interface AuditLogEntry {
+    id: string;
+    action: string;
+    oldValue?: string;
+    callerName: string;
+    callerRole: string;
+    page: string;
+    newValue?: string;
+    summary: string;
+    timestamp: bigint;
+    callerPrincipal: string;
 }
 export interface AISeatingSuggestion {
     suggestionId: string;
@@ -260,11 +327,22 @@ export interface Table {
     id: TableId;
     status: TableStatus;
     name: string;
+    zone?: string;
     seatCount?: bigint;
     guestName?: string;
     groupId?: string;
     capacity: bigint;
     reservationId?: ReservationId;
+}
+export interface ReservationChange {
+    id: string;
+    field: string;
+    changedByName: string;
+    changedByRole: string;
+    oldValue: string;
+    changedBy: string;
+    newValue: string;
+    timestamp: bigint;
 }
 export interface Guest {
     id: GuestId;
@@ -274,14 +352,6 @@ export interface Guest {
     tags: Array<string>;
     email: string;
     phone?: string;
-}
-export interface Experience {
-    id: ExperienceId;
-    maxCapacity: bigint;
-    name: string;
-    pricePerPerson: bigint;
-    description: string;
-    isActive: boolean;
 }
 export interface TeamMember {
     id: string;
@@ -325,6 +395,11 @@ export enum ReservationStatus {
     confirmed = "confirmed",
     not_arrived = "not_arrived"
 }
+export enum ReviewRequestDelay {
+    hour1 = "hour1",
+    hour2 = "hour2",
+    hour24 = "hour24"
+}
 export enum TableStatus {
     occupied = "occupied",
     reserved = "reserved",
@@ -347,6 +422,7 @@ export enum Variant_text_dropdown {
 }
 export enum WaitlistStatus {
     expired = "expired",
+    removed_by_staff = "removed_by_staff",
     confirmed = "confirmed",
     offered = "offered",
     waiting = "waiting"
@@ -360,7 +436,27 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
-    addToWaitlist(guestId: GuestId, date: string, partySize: bigint, requestedTime: string | null, notes: string | null): Promise<WaitlistEntry>;
+    addToWaitlist(guestId: GuestId, date: string, partySize: bigint, requestedTime: string | null, notes: string | null): Promise<{
+        __kind__: "ok";
+        ok: WaitlistEntry;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    addZone(name: string, color: string, maxGuests: bigint): Promise<{
+        __kind__: "ok";
+        ok: Zone;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    applyHouseStyleToAll(accentColor: string, backgroundColor: string, logoUrl: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     askAI(prompt: string, context: string): Promise<{
         __kind__: "ok";
         ok: string;
@@ -383,7 +479,7 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
-    autoAssignTable(reservationId: ReservationId, partySize: bigint): Promise<{
+    autoAssignTable(reservationId: ReservationId, partySize: bigint, date: string, time: string): Promise<{
         __kind__: "ok";
         ok: Table;
     } | {
@@ -391,19 +487,26 @@ export interface backendInterface {
         err: string;
     }>;
     cancelReservation(id: ReservationId): Promise<void>;
-    createExperience(name: string, description: string, pricePerPerson: bigint, maxCapacity: bigint): Promise<Experience>;
+    createExperience(name: string, description: string, pricePerPerson: bigint, maxCapacity: bigint, required: boolean, serviceIds: Array<string> | null, dayOfWeek: Array<bigint> | null): Promise<Experience>;
     createGuest(name: string, email: string, phone: string | null): Promise<Guest>;
     createReservation(guestId: GuestId, date: string, time: string, partySize: bigint, experienceId: ExperienceId | null, stripePaymentIntentId: string | null, specialRequests: string | null): Promise<Reservation>;
-    createReservationWithDetails(guestName: string, phone: string, email: string, partySize: bigint, date: string, timeSlot: string, tableId: string | null, notes: string | null): Promise<{
+    createReservationWithDetails(guestName: string, phone: string, email: string, partySize: bigint, date: string, timeSlot: string, tableId: string | null, notes: string | null, experienceId: ExperienceId | null): Promise<{
         __kind__: "ok";
         ok: Reservation;
     } | {
         __kind__: "err";
         err: string;
     }>;
-    createTable(name: string, capacity: bigint, x: bigint, y: bigint): Promise<{
+    createTable(name: string, capacity: bigint, x: bigint, y: bigint, zone: string | null): Promise<{
         __kind__: "ok";
         ok: Table;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    createTableGroupDefinition(name: string, tableIds: Array<string>, description: string): Promise<{
+        __kind__: "ok";
+        ok: TableGroupDefinition;
     } | {
         __kind__: "err";
         err: string;
@@ -422,8 +525,22 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
-    findBestTable(partySize: bigint, excludeTableIds: Array<string>): Promise<Table | null>;
-    findBestTableForReservation(partySize: bigint): Promise<Table | null>;
+    deleteTableGroupDefinition(id: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    deleteZone(id: string): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    findBestTable(partySize: bigint, date: string, time: string, excludeTableIds: Array<string>): Promise<Table | null>;
+    findBestTableForReservation(partySize: bigint, date: string, time: string): Promise<Table | null>;
     getAISuggestions(guestId: GuestId | null, reservationContext: string): Promise<{
         __kind__: "ok";
         ok: Array<string>;
@@ -433,13 +550,44 @@ export interface backendInterface {
     }>;
     getActiveSeason(date: string): Promise<SeasonalPeriod | null>;
     getActiveZonesForDate(date: string): Promise<Array<string>>;
-    getAvailableSlots(date: string): Promise<Array<TimeSlot>>;
+    getAuditLog(): Promise<{
+        __kind__: "ok";
+        ok: Array<AuditLogEntry>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    getAuditLogPaginated(offset: bigint, limit: bigint): Promise<{
+        __kind__: "ok";
+        ok: {
+            total: bigint;
+            entries: Array<AuditLogEntry>;
+        };
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    getAvailableSlots(date: string): Promise<AvailableSlotsResponse>;
     getCallerUserRole(): Promise<UserRole>;
-    getExtendedConfig(): Promise<RestaurantExtendedConfig>;
+    getEmailTemplates(): Promise<Array<EmailTemplate>>;
+    getExtendedConfig(): Promise<{
+        __kind__: "ok";
+        ok: RestaurantExtendedConfig;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     getFloorState(): Promise<FloorState>;
     getGuest(id: GuestId): Promise<Guest | null>;
     getKPIs(): Promise<KPIs>;
     getReservation(id: ReservationId): Promise<Reservation | null>;
+    getReservationChanges(id: ReservationId): Promise<{
+        __kind__: "ok";
+        ok: Array<ReservationChange>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     getRestaurantConfig(): Promise<{
         openingHour: bigint;
         restaurantName: string;
@@ -447,11 +595,26 @@ export interface backendInterface {
         totalSeatsPerSlot: bigint;
         slotIntervalMinutes: bigint;
     }>;
+    getReviewRequestSettings(): Promise<ReviewRequestSettings>;
     getSeasonalPeriods(): Promise<Array<SeasonalPeriod>>;
     getSuggestionAccuracyStats(days: bigint): Promise<SuggestionAccuracyStats>;
+    getTableGroupDefinitions(): Promise<{
+        __kind__: "ok";
+        ok: Array<TableGroupDefinition>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     getTables(): Promise<Array<Table>>;
     getWaitlist(date: string): Promise<Array<WaitlistEntry>>;
     getWaitlistEntry(id: WaitlistId): Promise<WaitlistEntry | null>;
+    getZones(): Promise<{
+        __kind__: "ok";
+        ok: Array<Zone>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     groupTables(tableIds: Array<string>, groupId: string): Promise<{
         __kind__: "ok";
         ok: Array<Table>;
@@ -461,12 +624,26 @@ export interface backendInterface {
     }>;
     hasOwner(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
-    listActiveExperiences(): Promise<Array<Experience>>;
+    listActiveExperiences(serviceFilter: string | null, dayFilter: bigint | null): Promise<Array<Experience>>;
     listExperiences(): Promise<Array<Experience>>;
     listGuests(): Promise<Array<Guest>>;
-    listReservations(filter: ReservationFilter): Promise<Array<Reservation>>;
+    listReservations(filter: ReservationFilter): Promise<{
+        __kind__: "ok";
+        ok: Array<Reservation>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     listTeamMembers(): Promise<Array<TeamMember>>;
+    logAuditEntry(callerText: string, page: string, action: string, summary: string, oldValue: string | null, newValue: string | null): Promise<void>;
     offerWaitlistSpot(id: WaitlistId): Promise<void>;
+    recordReviewRequestSent(reservationId: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     recordSuggestionFeedback(suggestionId: string, accepted: boolean, rejectionReason: string | null): Promise<{
         __kind__: "ok";
         ok: null;
@@ -495,6 +672,34 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    resetEmailTemplate(templateType: EmailTemplateType): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    saveEmailTemplate(template: EmailTemplate): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    saveEmailTemplates(templates: Array<EmailTemplate>): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    saveReviewRequestSettings(enabled: boolean, delay: ReviewRequestDelay, message: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     saveSeasonalPeriod(period: SeasonalPeriod): Promise<{
         __kind__: "ok";
         ok: null;
@@ -502,7 +707,10 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
-    searchGuests(searchQuery: string): Promise<Array<Guest>>;
+    searchGuests(searchQuery: string, limit: bigint, offset: bigint): Promise<{
+        total: bigint;
+        guests: Array<Guest>;
+    }>;
     setOwner(owner: Principal): Promise<void>;
     setTableStatus(tableId: TableId, status: TableStatus): Promise<{
         __kind__: "ok";
@@ -511,9 +719,17 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    shouldSendReviewRequest(reservationId: string): Promise<boolean>;
     suggestTable(partySize: bigint, zonePreference: string | null, date: string, time: string, existingReservations: Array<ReservationSummary>): Promise<{
         __kind__: "ok";
         ok: AISeatingSuggestion;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    syncTablesFromSettings(): Promise<{
+        __kind__: "ok";
+        ok: bigint;
     } | {
         __kind__: "err";
         err: string;
@@ -590,7 +806,7 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
-    updateReservation(id: ReservationId, date: string, time: string, partySize: bigint, specialRequests: string | null): Promise<{
+    updateReservation(id: ReservationId, newDate: string, newTime: string, newPartySize: bigint, newSpecialRequests: string | null, newStatus: ReservationStatus | null, newExperienceId: ExperienceId | null, newNotes: string | null, newTableId: string | null): Promise<{
         __kind__: "ok";
         ok: Reservation;
     } | {
@@ -613,7 +829,28 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    updateTableCapacity(tableId: TableId, newCapacity: bigint): Promise<{
+        __kind__: "ok";
+        ok: Table;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    updateTableGroupDefinition(id: string, name: string, tableIds: Array<string>, description: string): Promise<{
+        __kind__: "ok";
+        ok: TableGroupDefinition;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     updateTablePosition(id: TableId, x: bigint, y: bigint): Promise<{
+        __kind__: "ok";
+        ok: Table;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    updateTableZone(tableId: TableId, zone: string | null): Promise<{
         __kind__: "ok";
         ok: Table;
     } | {
@@ -634,8 +871,22 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    updateZone(id: string, name: string, color: string, maxGuests: bigint): Promise<{
+        __kind__: "ok";
+        ok: Zone;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    updateZoneBoundaries(id: string, boundaries: string): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
 }
-import type { AISeatingSuggestion as _AISeatingSuggestion, BrandingSettings as _BrandingSettings, ClosingDay as _ClosingDay, CustomQuestion as _CustomQuestion, DayOfWeek as _DayOfWeek, ExperienceId as _ExperienceId, FloorState as _FloorState, Guest as _Guest, GuestFormSettings as _GuestFormSettings, GuestId as _GuestId, IntegrationSettings as _IntegrationSettings, NotificationSettings as _NotificationSettings, OccupancySettings as _OccupancySettings, Reservation as _Reservation, ReservationFilter as _ReservationFilter, ReservationId as _ReservationId, ReservationRules as _ReservationRules, ReservationStatus as _ReservationStatus, RestaurantExtendedConfig as _RestaurantExtendedConfig, SeasonalPeriod as _SeasonalPeriod, ServiceHours as _ServiceHours, Table as _Table, TableAssignment as _TableAssignment, TableId as _TableId, TableStatus as _TableStatus, TableType as _TableType, TeamMember as _TeamMember, TimeSlot as _TimeSlot, TimeSlotStatus as _TimeSlotStatus, Timestamp as _Timestamp, UserRole as _UserRole, WaitlistEntry as _WaitlistEntry, WaitlistId as _WaitlistId, WaitlistStatus as _WaitlistStatus, ZoneCapacity as _ZoneCapacity } from "./declarations/backend.did.d.ts";
+import type { AISeatingSuggestion as _AISeatingSuggestion, AuditLogEntry as _AuditLogEntry, AvailableSlotsResponse as _AvailableSlotsResponse, BrandingSettings as _BrandingSettings, ClosingDay as _ClosingDay, CustomQuestion as _CustomQuestion, DayOfWeek as _DayOfWeek, Experience as _Experience, ExperienceId as _ExperienceId, FloorState as _FloorState, Guest as _Guest, GuestFormSettings as _GuestFormSettings, GuestId as _GuestId, IntegrationSettings as _IntegrationSettings, NotificationSettings as _NotificationSettings, OccupancySettings as _OccupancySettings, Reservation as _Reservation, ReservationChange as _ReservationChange, ReservationFilter as _ReservationFilter, ReservationId as _ReservationId, ReservationRules as _ReservationRules, ReservationStatus as _ReservationStatus, RestaurantExtendedConfig as _RestaurantExtendedConfig, ReviewRequestDelay as _ReviewRequestDelay, ReviewRequestSettings as _ReviewRequestSettings, SeasonalPeriod as _SeasonalPeriod, ServiceHours as _ServiceHours, Table as _Table, TableAssignment as _TableAssignment, TableGroupDefinition as _TableGroupDefinition, TableId as _TableId, TableStatus as _TableStatus, TableType as _TableType, TeamMember as _TeamMember, TimeSlot as _TimeSlot, TimeSlotStatus as _TimeSlotStatus, Timestamp as _Timestamp, UserRole as _UserRole, WaitlistEntry as _WaitlistEntry, WaitlistId as _WaitlistId, WaitlistStatus as _WaitlistStatus, Zone as _Zone, ZoneCapacity as _ZoneCapacity } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControl(): Promise<void> {
@@ -672,18 +923,64 @@ export class Backend implements backendInterface {
             return from_candid_variant_n1(this._uploadFile, this._downloadFile, result);
         }
     }
-    async addToWaitlist(arg0: GuestId, arg1: string, arg2: bigint, arg3: string | null, arg4: string | null): Promise<WaitlistEntry> {
+    async addToWaitlist(arg0: GuestId, arg1: string, arg2: bigint, arg3: string | null, arg4: string | null): Promise<{
+        __kind__: "ok";
+        ok: WaitlistEntry;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
         if (this.processError) {
             try {
                 const result = await this.actor.addToWaitlist(arg0, arg1, arg2, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg3), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
-                return from_candid_WaitlistEntry_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.addToWaitlist(arg0, arg1, arg2, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg3), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
-            return from_candid_WaitlistEntry_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async addZone(arg0: string, arg1: string, arg2: bigint): Promise<{
+        __kind__: "ok";
+        ok: Zone;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addZone(arg0, arg1, arg2);
+                return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addZone(arg0, arg1, arg2);
+            return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async applyHouseStyleToAll(arg0: string, arg1: string, arg2: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.applyHouseStyleToAll(arg0, arg1, arg2);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.applyHouseStyleToAll(arg0, arg1, arg2);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async askAI(arg0: string, arg1: string): Promise<{
@@ -696,27 +993,27 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.askAI(arg0, arg1);
-                return from_candid_variant_n9(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.askAI(arg0, arg1);
-            return from_candid_variant_n9(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n10(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n15(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n10(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n15(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
@@ -730,14 +1027,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.assignReservationToTable(arg0, arg1);
-                return from_candid_variant_n12(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.assignReservationToTable(arg0, arg1);
-            return from_candid_variant_n12(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
         }
     }
     async assignReservationToTableWithDetails(arg0: TableId, arg1: ReservationId, arg2: string, arg3: bigint): Promise<{
@@ -750,17 +1047,17 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.assignReservationToTableWithDetails(arg0, arg1, arg2, arg3);
-                return from_candid_variant_n12(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.assignReservationToTableWithDetails(arg0, arg1, arg2, arg3);
-            return from_candid_variant_n12(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
         }
     }
-    async autoAssignTable(arg0: ReservationId, arg1: bigint): Promise<{
+    async autoAssignTable(arg0: ReservationId, arg1: bigint, arg2: string, arg3: string): Promise<{
         __kind__: "ok";
         ok: Table;
     } | {
@@ -769,15 +1066,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.autoAssignTable(arg0, arg1);
-                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.autoAssignTable(arg0, arg1, arg2, arg3);
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.autoAssignTable(arg0, arg1);
-            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.autoAssignTable(arg0, arg1, arg2, arg3);
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async cancelReservation(arg0: ReservationId): Promise<void> {
@@ -794,49 +1091,49 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createExperience(arg0: string, arg1: string, arg2: bigint, arg3: bigint): Promise<Experience> {
+    async createExperience(arg0: string, arg1: string, arg2: bigint, arg3: bigint, arg4: boolean, arg5: Array<string> | null, arg6: Array<bigint> | null): Promise<Experience> {
         if (this.processError) {
             try {
-                const result = await this.actor.createExperience(arg0, arg1, arg2, arg3);
-                return result;
+                const result = await this.actor.createExperience(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n25(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n26(this._uploadFile, this._downloadFile, arg6));
+                return from_candid_Experience_n27(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createExperience(arg0, arg1, arg2, arg3);
-            return result;
+            const result = await this.actor.createExperience(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n25(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n26(this._uploadFile, this._downloadFile, arg6));
+            return from_candid_Experience_n27(this._uploadFile, this._downloadFile, result);
         }
     }
     async createGuest(arg0: string, arg1: string, arg2: string | null): Promise<Guest> {
         if (this.processError) {
             try {
                 const result = await this.actor.createGuest(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-                return from_candid_Guest_n20(this._uploadFile, this._downloadFile, result);
+                return from_candid_Guest_n31(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.createGuest(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-            return from_candid_Guest_n20(this._uploadFile, this._downloadFile, result);
+            return from_candid_Guest_n31(this._uploadFile, this._downloadFile, result);
         }
     }
     async createReservation(arg0: GuestId, arg1: string, arg2: string, arg3: bigint, arg4: ExperienceId | null, arg5: string | null, arg6: string | null): Promise<Reservation> {
         if (this.processError) {
             try {
-                const result = await this.actor.createReservation(arg0, arg1, arg2, arg3, to_candid_opt_n22(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6));
-                return from_candid_Reservation_n23(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.createReservation(arg0, arg1, arg2, arg3, to_candid_opt_n33(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6));
+                return from_candid_Reservation_n34(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createReservation(arg0, arg1, arg2, arg3, to_candid_opt_n22(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6));
-            return from_candid_Reservation_n23(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.createReservation(arg0, arg1, arg2, arg3, to_candid_opt_n33(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6));
+            return from_candid_Reservation_n34(this._uploadFile, this._downloadFile, result);
         }
     }
-    async createReservationWithDetails(arg0: string, arg1: string, arg2: string, arg3: bigint, arg4: string, arg5: string, arg6: string | null, arg7: string | null): Promise<{
+    async createReservationWithDetails(arg0: string, arg1: string, arg2: string, arg3: bigint, arg4: string, arg5: string, arg6: string | null, arg7: string | null, arg8: ExperienceId | null): Promise<{
         __kind__: "ok";
         ok: Reservation;
     } | {
@@ -845,18 +1142,18 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.createReservationWithDetails(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7));
-                return from_candid_variant_n28(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.createReservationWithDetails(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n33(this._uploadFile, this._downloadFile, arg8));
+                return from_candid_variant_n39(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createReservationWithDetails(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7));
-            return from_candid_variant_n28(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.createReservationWithDetails(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n33(this._uploadFile, this._downloadFile, arg8));
+            return from_candid_variant_n39(this._uploadFile, this._downloadFile, result);
         }
     }
-    async createTable(arg0: string, arg1: bigint, arg2: bigint, arg3: bigint): Promise<{
+    async createTable(arg0: string, arg1: bigint, arg2: bigint, arg3: bigint, arg4: string | null): Promise<{
         __kind__: "ok";
         ok: Table;
     } | {
@@ -865,15 +1162,35 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.createTable(arg0, arg1, arg2, arg3);
-                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.createTable(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createTable(arg0, arg1, arg2, arg3);
-            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.createTable(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async createTableGroupDefinition(arg0: string, arg1: Array<string>, arg2: string): Promise<{
+        __kind__: "ok";
+        ok: TableGroupDefinition;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createTableGroupDefinition(arg0, arg1, arg2);
+                return from_candid_variant_n40(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createTableGroupDefinition(arg0, arg1, arg2);
+            return from_candid_variant_n40(this._uploadFile, this._downloadFile, result);
         }
     }
     async deleteSeasonalPeriod(arg0: string): Promise<{
@@ -886,14 +1203,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.deleteSeasonalPeriod(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.deleteSeasonalPeriod(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async deleteTable(arg0: TableId): Promise<{
@@ -906,42 +1223,82 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.deleteTable(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.deleteTable(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
-    async findBestTable(arg0: bigint, arg1: Array<string>): Promise<Table | null> {
+    async deleteTableGroupDefinition(arg0: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
         if (this.processError) {
             try {
-                const result = await this.actor.findBestTable(arg0, arg1);
-                return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.deleteTableGroupDefinition(arg0);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.findBestTable(arg0, arg1);
-            return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.deleteTableGroupDefinition(arg0);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
-    async findBestTableForReservation(arg0: bigint): Promise<Table | null> {
+    async deleteZone(arg0: string): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
         if (this.processError) {
             try {
-                const result = await this.actor.findBestTableForReservation(arg0);
-                return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.deleteZone(arg0);
+                return from_candid_variant_n41(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.findBestTableForReservation(arg0);
-            return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.deleteZone(arg0);
+            return from_candid_variant_n41(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async findBestTable(arg0: bigint, arg1: string, arg2: string, arg3: Array<string>): Promise<Table | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.findBestTable(arg0, arg1, arg2, arg3);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.findBestTable(arg0, arg1, arg2, arg3);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async findBestTableForReservation(arg0: bigint, arg1: string, arg2: string): Promise<Table | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.findBestTableForReservation(arg0, arg1, arg2);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.findBestTableForReservation(arg0, arg1, arg2);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAISuggestions(arg0: GuestId | null, arg1: string): Promise<{
@@ -953,29 +1310,29 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAISuggestions(to_candid_opt_n31(this._uploadFile, this._downloadFile, arg0), arg1);
-                return from_candid_variant_n32(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.getAISuggestions(to_candid_opt_n43(this._uploadFile, this._downloadFile, arg0), arg1);
+                return from_candid_variant_n44(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAISuggestions(to_candid_opt_n31(this._uploadFile, this._downloadFile, arg0), arg1);
-            return from_candid_variant_n32(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.getAISuggestions(to_candid_opt_n43(this._uploadFile, this._downloadFile, arg0), arg1);
+            return from_candid_variant_n44(this._uploadFile, this._downloadFile, result);
         }
     }
     async getActiveSeason(arg0: string): Promise<SeasonalPeriod | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getActiveSeason(arg0);
-                return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n45(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getActiveSeason(arg0);
-            return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n45(this._uploadFile, this._downloadFile, result);
         }
     }
     async getActiveZonesForDate(arg0: string): Promise<Array<string>> {
@@ -992,74 +1349,137 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getAvailableSlots(arg0: string): Promise<Array<TimeSlot>> {
+    async getAuditLog(): Promise<{
+        __kind__: "ok";
+        ok: Array<AuditLogEntry>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAuditLog();
+                return from_candid_variant_n48(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAuditLog();
+            return from_candid_variant_n48(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAuditLogPaginated(arg0: bigint, arg1: bigint): Promise<{
+        __kind__: "ok";
+        ok: {
+            total: bigint;
+            entries: Array<AuditLogEntry>;
+        };
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAuditLogPaginated(arg0, arg1);
+                return from_candid_variant_n52(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAuditLogPaginated(arg0, arg1);
+            return from_candid_variant_n52(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAvailableSlots(arg0: string): Promise<AvailableSlotsResponse> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAvailableSlots(arg0);
-                return from_candid_vec_n36(this._uploadFile, this._downloadFile, result);
+                return from_candid_AvailableSlotsResponse_n54(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAvailableSlots(arg0);
-            return from_candid_vec_n36(this._uploadFile, this._downloadFile, result);
+            return from_candid_AvailableSlotsResponse_n54(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n41(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n61(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n41(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n61(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getExtendedConfig(): Promise<RestaurantExtendedConfig> {
+    async getEmailTemplates(): Promise<Array<EmailTemplate>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getEmailTemplates();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getEmailTemplates();
+            return result;
+        }
+    }
+    async getExtendedConfig(): Promise<{
+        __kind__: "ok";
+        ok: RestaurantExtendedConfig;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
         if (this.processError) {
             try {
                 const result = await this.actor.getExtendedConfig();
-                return from_candid_RestaurantExtendedConfig_n43(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n63(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getExtendedConfig();
-            return from_candid_RestaurantExtendedConfig_n43(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n63(this._uploadFile, this._downloadFile, result);
         }
     }
     async getFloorState(): Promise<FloorState> {
         if (this.processError) {
             try {
                 const result = await this.actor.getFloorState();
-                return from_candid_FloorState_n59(this._uploadFile, this._downloadFile, result);
+                return from_candid_FloorState_n81(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getFloorState();
-            return from_candid_FloorState_n59(this._uploadFile, this._downloadFile, result);
+            return from_candid_FloorState_n81(this._uploadFile, this._downloadFile, result);
         }
     }
     async getGuest(arg0: GuestId): Promise<Guest | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getGuest(arg0);
-                return from_candid_opt_n62(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n84(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getGuest(arg0);
-            return from_candid_opt_n62(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n84(this._uploadFile, this._downloadFile, result);
         }
     }
     async getKPIs(): Promise<KPIs> {
@@ -1080,14 +1500,34 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getReservation(arg0);
-                return from_candid_opt_n63(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n85(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getReservation(arg0);
-            return from_candid_opt_n63(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n85(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getReservationChanges(arg0: ReservationId): Promise<{
+        __kind__: "ok";
+        ok: Array<ReservationChange>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getReservationChanges(arg0);
+                return from_candid_variant_n86(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getReservationChanges(arg0);
+            return from_candid_variant_n86(this._uploadFile, this._downloadFile, result);
         }
     }
     async getRestaurantConfig(): Promise<{
@@ -1110,18 +1550,32 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getReviewRequestSettings(): Promise<ReviewRequestSettings> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getReviewRequestSettings();
+                return from_candid_ReviewRequestSettings_n87(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getReviewRequestSettings();
+            return from_candid_ReviewRequestSettings_n87(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getSeasonalPeriods(): Promise<Array<SeasonalPeriod>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getSeasonalPeriods();
-                return from_candid_vec_n64(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n91(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getSeasonalPeriods();
-            return from_candid_vec_n64(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n91(this._uploadFile, this._downloadFile, result);
         }
     }
     async getSuggestionAccuracyStats(arg0: bigint): Promise<SuggestionAccuracyStats> {
@@ -1138,46 +1592,86 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getTableGroupDefinitions(): Promise<{
+        __kind__: "ok";
+        ok: Array<TableGroupDefinition>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getTableGroupDefinitions();
+                return from_candid_variant_n92(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getTableGroupDefinitions();
+            return from_candid_variant_n92(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getTables(): Promise<Array<Table>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getTables();
-                return from_candid_vec_n61(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n83(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getTables();
-            return from_candid_vec_n61(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n83(this._uploadFile, this._downloadFile, result);
         }
     }
     async getWaitlist(arg0: string): Promise<Array<WaitlistEntry>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getWaitlist(arg0);
-                return from_candid_vec_n65(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n93(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getWaitlist(arg0);
-            return from_candid_vec_n65(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n93(this._uploadFile, this._downloadFile, result);
         }
     }
     async getWaitlistEntry(arg0: WaitlistId): Promise<WaitlistEntry | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getWaitlistEntry(arg0);
-                return from_candid_opt_n66(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n94(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getWaitlistEntry(arg0);
-            return from_candid_opt_n66(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n94(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getZones(): Promise<{
+        __kind__: "ok";
+        ok: Array<Zone>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getZones();
+                return from_candid_variant_n95(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getZones();
+            return from_candid_variant_n95(this._uploadFile, this._downloadFile, result);
         }
     }
     async groupTables(arg0: Array<string>, arg1: string): Promise<{
@@ -1190,14 +1684,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.groupTables(arg0, arg1);
-                return from_candid_variant_n67(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n96(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.groupTables(arg0, arg1);
-            return from_candid_variant_n67(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n96(this._uploadFile, this._downloadFile, result);
         }
     }
     async hasOwner(): Promise<boolean> {
@@ -1228,60 +1722,66 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async listActiveExperiences(): Promise<Array<Experience>> {
+    async listActiveExperiences(arg0: string | null, arg1: bigint | null): Promise<Array<Experience>> {
         if (this.processError) {
             try {
-                const result = await this.actor.listActiveExperiences();
-                return result;
+                const result = await this.actor.listActiveExperiences(to_candid_opt_n2(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n97(this._uploadFile, this._downloadFile, arg1));
+                return from_candid_vec_n98(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.listActiveExperiences();
-            return result;
+            const result = await this.actor.listActiveExperiences(to_candid_opt_n2(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n97(this._uploadFile, this._downloadFile, arg1));
+            return from_candid_vec_n98(this._uploadFile, this._downloadFile, result);
         }
     }
     async listExperiences(): Promise<Array<Experience>> {
         if (this.processError) {
             try {
                 const result = await this.actor.listExperiences();
-                return result;
+                return from_candid_vec_n98(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.listExperiences();
-            return result;
+            return from_candid_vec_n98(this._uploadFile, this._downloadFile, result);
         }
     }
     async listGuests(): Promise<Array<Guest>> {
         if (this.processError) {
             try {
                 const result = await this.actor.listGuests();
-                return from_candid_vec_n68(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n99(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.listGuests();
-            return from_candid_vec_n68(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n99(this._uploadFile, this._downloadFile, result);
         }
     }
-    async listReservations(arg0: ReservationFilter): Promise<Array<Reservation>> {
+    async listReservations(arg0: ReservationFilter): Promise<{
+        __kind__: "ok";
+        ok: Array<Reservation>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
         if (this.processError) {
             try {
-                const result = await this.actor.listReservations(to_candid_ReservationFilter_n69(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_vec_n73(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.listReservations(to_candid_ReservationFilter_n100(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n104(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.listReservations(to_candid_ReservationFilter_n69(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_vec_n73(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.listReservations(to_candid_ReservationFilter_n100(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n104(this._uploadFile, this._downloadFile, result);
         }
     }
     async listTeamMembers(): Promise<Array<TeamMember>> {
@@ -1295,6 +1795,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.listTeamMembers();
+            return result;
+        }
+    }
+    async logAuditEntry(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string | null, arg5: string | null): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.logAuditEntry(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.logAuditEntry(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5));
             return result;
         }
     }
@@ -1312,6 +1826,26 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async recordReviewRequestSent(arg0: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.recordReviewRequestSent(arg0);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.recordReviewRequestSent(arg0);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async recordSuggestionFeedback(arg0: string, arg1: boolean, arg2: string | null): Promise<{
         __kind__: "ok";
         ok: null;
@@ -1322,14 +1856,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.recordSuggestionFeedback(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.recordSuggestionFeedback(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async removeTeamMember(arg0: string): Promise<{
@@ -1342,14 +1876,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.removeTeamMember(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.removeTeamMember(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async removeWaitlistEntry(arg0: WaitlistId): Promise<{
@@ -1362,14 +1896,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.removeWaitlistEntry(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.removeWaitlistEntry(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async reofferWaitlistSpot(arg0: WaitlistId): Promise<{
@@ -1382,14 +1916,94 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.reofferWaitlistSpot(arg0);
-                return from_candid_variant_n74(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.reofferWaitlistSpot(arg0);
-            return from_candid_variant_n74(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async resetEmailTemplate(arg0: EmailTemplateType): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.resetEmailTemplate(arg0);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.resetEmailTemplate(arg0);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async saveEmailTemplate(arg0: EmailTemplate): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveEmailTemplate(arg0);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveEmailTemplate(arg0);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async saveEmailTemplates(arg0: Array<EmailTemplate>): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveEmailTemplates(arg0);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveEmailTemplates(arg0);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async saveReviewRequestSettings(arg0: boolean, arg1: ReviewRequestDelay, arg2: string): Promise<{
+        __kind__: "ok";
+        ok: null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveReviewRequestSettings(arg0, to_candid_ReviewRequestDelay_n106(this._uploadFile, this._downloadFile, arg1), arg2);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveReviewRequestSettings(arg0, to_candid_ReviewRequestDelay_n106(this._uploadFile, this._downloadFile, arg1), arg2);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async saveSeasonalPeriod(arg0: SeasonalPeriod): Promise<{
@@ -1401,29 +2015,32 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveSeasonalPeriod(to_candid_SeasonalPeriod_n75(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.saveSeasonalPeriod(to_candid_SeasonalPeriod_n108(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveSeasonalPeriod(to_candid_SeasonalPeriod_n75(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.saveSeasonalPeriod(to_candid_SeasonalPeriod_n108(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
-    async searchGuests(arg0: string): Promise<Array<Guest>> {
+    async searchGuests(arg0: string, arg1: bigint, arg2: bigint): Promise<{
+        total: bigint;
+        guests: Array<Guest>;
+    }> {
         if (this.processError) {
             try {
-                const result = await this.actor.searchGuests(arg0);
-                return from_candid_vec_n68(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.searchGuests(arg0, arg1, arg2);
+                return from_candid_record_n110(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.searchGuests(arg0);
-            return from_candid_vec_n68(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.searchGuests(arg0, arg1, arg2);
+            return from_candid_record_n110(this._uploadFile, this._downloadFile, result);
         }
     }
     async setOwner(arg0: Principal): Promise<void> {
@@ -1449,15 +2066,29 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.setTableStatus(arg0, to_candid_TableStatus_n77(this._uploadFile, this._downloadFile, arg1));
-                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.setTableStatus(arg0, to_candid_TableStatus_n111(this._uploadFile, this._downloadFile, arg1));
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setTableStatus(arg0, to_candid_TableStatus_n77(this._uploadFile, this._downloadFile, arg1));
-            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.setTableStatus(arg0, to_candid_TableStatus_n111(this._uploadFile, this._downloadFile, arg1));
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async shouldSendReviewRequest(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.shouldSendReviewRequest(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.shouldSendReviewRequest(arg0);
+            return result;
         }
     }
     async suggestTable(arg0: bigint, arg1: string | null, arg2: string, arg3: string, arg4: Array<ReservationSummary>): Promise<{
@@ -1470,14 +2101,34 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.suggestTable(arg0, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg1), arg2, arg3, arg4);
-                return from_candid_variant_n79(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n113(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.suggestTable(arg0, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg1), arg2, arg3, arg4);
-            return from_candid_variant_n79(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n113(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async syncTablesFromSettings(): Promise<{
+        __kind__: "ok";
+        ok: bigint;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.syncTablesFromSettings();
+                return from_candid_variant_n116(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.syncTablesFromSettings();
+            return from_candid_variant_n116(this._uploadFile, this._downloadFile, result);
         }
     }
     async toggleSeasonalPeriod(arg0: string, arg1: boolean): Promise<{
@@ -1490,14 +2141,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.toggleSeasonalPeriod(arg0, arg1);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.toggleSeasonalPeriod(arg0, arg1);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async unassignTable(arg0: TableId): Promise<{
@@ -1510,14 +2161,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.unassignTable(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.unassignTable(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async ungroupTables(arg0: string): Promise<{
@@ -1530,14 +2181,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.ungroupTables(arg0);
-                return from_candid_variant_n67(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n96(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.ungroupTables(arg0);
-            return from_candid_variant_n67(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n96(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateBrandingSettings(arg0: BrandingSettings): Promise<{
@@ -1549,15 +2200,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateBrandingSettings(to_candid_BrandingSettings_n82(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateBrandingSettings(to_candid_BrandingSettings_n117(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateBrandingSettings(to_candid_BrandingSettings_n82(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateBrandingSettings(to_candid_BrandingSettings_n117(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateCapacitySettings(arg0: Array<ZoneCapacity>, arg1: Array<TableType>, arg2: OccupancySettings | null, arg3: bigint): Promise<{
@@ -1569,15 +2220,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateCapacitySettings(arg0, arg1, to_candid_opt_n84(this._uploadFile, this._downloadFile, arg2), arg3);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateCapacitySettings(arg0, arg1, to_candid_opt_n119(this._uploadFile, this._downloadFile, arg2), arg3);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateCapacitySettings(arg0, arg1, to_candid_opt_n84(this._uploadFile, this._downloadFile, arg2), arg3);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateCapacitySettings(arg0, arg1, to_candid_opt_n119(this._uploadFile, this._downloadFile, arg2), arg3);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateExceptionalClosingDays(arg0: Array<DayOfWeek>, arg1: Array<ClosingDay>): Promise<{
@@ -1589,28 +2240,28 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateExceptionalClosingDays(arg0, to_candid_vec_n85(this._uploadFile, this._downloadFile, arg1));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateExceptionalClosingDays(arg0, to_candid_vec_n120(this._uploadFile, this._downloadFile, arg1));
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateExceptionalClosingDays(arg0, to_candid_vec_n85(this._uploadFile, this._downloadFile, arg1));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateExceptionalClosingDays(arg0, to_candid_vec_n120(this._uploadFile, this._downloadFile, arg1));
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateExperience(arg0: Experience): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateExperience(arg0);
+                const result = await this.actor.updateExperience(to_candid_Experience_n123(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateExperience(arg0);
+            const result = await this.actor.updateExperience(to_candid_Experience_n123(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
@@ -1624,14 +2275,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateGeneralInfo(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateGeneralInfo(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg5));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateGuestFormSettings(arg0: GuestFormSettings): Promise<{
@@ -1643,15 +2294,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateGuestFormSettings(to_candid_GuestFormSettings_n88(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateGuestFormSettings(to_candid_GuestFormSettings_n125(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateGuestFormSettings(to_candid_GuestFormSettings_n88(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateGuestFormSettings(to_candid_GuestFormSettings_n125(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateGuestTags(arg0: GuestId, arg1: Array<string>): Promise<void> {
@@ -1677,15 +2328,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateIntegrationSettings(to_candid_IntegrationSettings_n94(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateIntegrationSettings(to_candid_IntegrationSettings_n131(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateIntegrationSettings(to_candid_IntegrationSettings_n94(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateIntegrationSettings(to_candid_IntegrationSettings_n131(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateNotificationSettings(arg0: NotificationSettings): Promise<{
@@ -1698,17 +2349,17 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateNotificationSettings(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateNotificationSettings(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
-    async updateReservation(arg0: ReservationId, arg1: string, arg2: string, arg3: bigint, arg4: string | null): Promise<{
+    async updateReservation(arg0: ReservationId, arg1: string, arg2: string, arg3: bigint, arg4: string | null, arg5: ReservationStatus | null, arg6: ExperienceId | null, arg7: string | null, arg8: string | null): Promise<{
         __kind__: "ok";
         ok: Reservation;
     } | {
@@ -1717,15 +2368,15 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateReservation(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
-                return from_candid_variant_n28(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateReservation(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n133(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n33(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg8));
+                return from_candid_variant_n39(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateReservation(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4));
-            return from_candid_variant_n28(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateReservation(arg0, arg1, arg2, arg3, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg4), to_candid_opt_n133(this._uploadFile, this._downloadFile, arg5), to_candid_opt_n33(this._uploadFile, this._downloadFile, arg6), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n2(this._uploadFile, this._downloadFile, arg8));
+            return from_candid_variant_n39(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateReservationRules(arg0: ReservationRules): Promise<{
@@ -1738,27 +2389,27 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateReservationRules(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateReservationRules(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateReservationStatus(arg0: ReservationId, arg1: ReservationStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateReservationStatus(arg0, to_candid_ReservationStatus_n71(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.updateReservationStatus(arg0, to_candid_ReservationStatus_n102(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateReservationStatus(arg0, to_candid_ReservationStatus_n71(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.updateReservationStatus(arg0, to_candid_ReservationStatus_n102(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
@@ -1786,14 +2437,54 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateServiceHours(arg0);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateServiceHours(arg0);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updateTableCapacity(arg0: TableId, arg1: bigint): Promise<{
+        __kind__: "ok";
+        ok: Table;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateTableCapacity(arg0, arg1);
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateTableCapacity(arg0, arg1);
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updateTableGroupDefinition(arg0: string, arg1: string, arg2: Array<string>, arg3: string): Promise<{
+        __kind__: "ok";
+        ok: TableGroupDefinition;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateTableGroupDefinition(arg0, arg1, arg2, arg3);
+                return from_candid_variant_n40(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateTableGroupDefinition(arg0, arg1, arg2, arg3);
+            return from_candid_variant_n40(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateTablePosition(arg0: TableId, arg1: bigint, arg2: bigint): Promise<{
@@ -1806,14 +2497,34 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateTablePosition(arg0, arg1, arg2);
-                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateTablePosition(arg0, arg1, arg2);
-            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updateTableZone(arg0: TableId, arg1: string | null): Promise<{
+        __kind__: "ok";
+        ok: Table;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateTableZone(arg0, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg1));
+                return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateTableZone(arg0, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg1));
+            return from_candid_variant_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateTeamMemberRole(arg0: string, arg1: string): Promise<{
@@ -1826,14 +2537,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateTeamMemberRole(arg0, arg1);
-                return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateTeamMemberRole(arg0, arg1);
-            return from_candid_variant_n29(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async updateWaitlistEntry(arg0: WaitlistId, arg1: bigint, arg2: string | null): Promise<{
@@ -1846,475 +2557,184 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.updateWaitlistEntry(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-                return from_candid_variant_n74(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateWaitlistEntry(arg0, arg1, to_candid_opt_n2(this._uploadFile, this._downloadFile, arg2));
-            return from_candid_variant_n74(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updateZone(arg0: string, arg1: string, arg2: string, arg3: bigint): Promise<{
+        __kind__: "ok";
+        ok: Zone;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateZone(arg0, arg1, arg2, arg3);
+                return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateZone(arg0, arg1, arg2, arg3);
+            return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updateZoneBoundaries(arg0: string, arg1: string): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateZoneBoundaries(arg0, arg1);
+                return from_candid_variant_n41(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateZoneBoundaries(arg0, arg1);
+            return from_candid_variant_n41(this._uploadFile, this._downloadFile, result);
         }
     }
 }
-function from_candid_AISeatingSuggestion_n80(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AISeatingSuggestion): AISeatingSuggestion {
-    return from_candid_record_n81(_uploadFile, _downloadFile, value);
+function from_candid_AISeatingSuggestion_n114(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AISeatingSuggestion): AISeatingSuggestion {
+    return from_candid_record_n115(_uploadFile, _downloadFile, value);
 }
-function from_candid_BrandingSettings_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _BrandingSettings): BrandingSettings {
-    return from_candid_record_n55(_uploadFile, _downloadFile, value);
-}
-function from_candid_ClosingDay_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ClosingDay): ClosingDay {
-    return from_candid_record_n58(_uploadFile, _downloadFile, value);
-}
-function from_candid_CustomQuestion_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CustomQuestion): CustomQuestion {
+function from_candid_AuditLogEntry_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AuditLogEntry): AuditLogEntry {
     return from_candid_record_n51(_uploadFile, _downloadFile, value);
 }
-function from_candid_FloorState_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _FloorState): FloorState {
-    return from_candid_record_n60(_uploadFile, _downloadFile, value);
+function from_candid_AvailableSlotsResponse_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AvailableSlotsResponse): AvailableSlotsResponse {
+    return from_candid_record_n55(_uploadFile, _downloadFile, value);
 }
-function from_candid_GuestFormSettings_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _GuestFormSettings): GuestFormSettings {
-    return from_candid_record_n48(_uploadFile, _downloadFile, value);
+function from_candid_BrandingSettings_n76(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _BrandingSettings): BrandingSettings {
+    return from_candid_record_n77(_uploadFile, _downloadFile, value);
 }
-function from_candid_Guest_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Guest): Guest {
-    return from_candid_record_n21(_uploadFile, _downloadFile, value);
+function from_candid_ClosingDay_n79(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ClosingDay): ClosingDay {
+    return from_candid_record_n80(_uploadFile, _downloadFile, value);
 }
-function from_candid_IntegrationSettings_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _IntegrationSettings): IntegrationSettings {
-    return from_candid_record_n46(_uploadFile, _downloadFile, value);
+function from_candid_CustomQuestion_n71(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CustomQuestion): CustomQuestion {
+    return from_candid_record_n72(_uploadFile, _downloadFile, value);
 }
-function from_candid_ReservationStatus_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReservationStatus): ReservationStatus {
-    return from_candid_variant_n26(_uploadFile, _downloadFile, value);
+function from_candid_Experience_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Experience): Experience {
+    return from_candid_record_n28(_uploadFile, _downloadFile, value);
 }
-function from_candid_Reservation_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Reservation): Reservation {
-    return from_candid_record_n24(_uploadFile, _downloadFile, value);
+function from_candid_FloorState_n81(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _FloorState): FloorState {
+    return from_candid_record_n82(_uploadFile, _downloadFile, value);
 }
-function from_candid_RestaurantExtendedConfig_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _RestaurantExtendedConfig): RestaurantExtendedConfig {
-    return from_candid_record_n44(_uploadFile, _downloadFile, value);
+function from_candid_GuestFormSettings_n68(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _GuestFormSettings): GuestFormSettings {
+    return from_candid_record_n69(_uploadFile, _downloadFile, value);
 }
-function from_candid_SeasonalPeriod_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _SeasonalPeriod): SeasonalPeriod {
+function from_candid_Guest_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Guest): Guest {
+    return from_candid_record_n32(_uploadFile, _downloadFile, value);
+}
+function from_candid_IntegrationSettings_n66(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _IntegrationSettings): IntegrationSettings {
+    return from_candid_record_n67(_uploadFile, _downloadFile, value);
+}
+function from_candid_ReservationStatus_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReservationStatus): ReservationStatus {
+    return from_candid_variant_n37(_uploadFile, _downloadFile, value);
+}
+function from_candid_Reservation_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Reservation): Reservation {
     return from_candid_record_n35(_uploadFile, _downloadFile, value);
 }
-function from_candid_TableStatus_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TableStatus): TableStatus {
-    return from_candid_variant_n17(_uploadFile, _downloadFile, value);
+function from_candid_RestaurantExtendedConfig_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _RestaurantExtendedConfig): RestaurantExtendedConfig {
+    return from_candid_record_n65(_uploadFile, _downloadFile, value);
 }
-function from_candid_Table_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Table): Table {
-    return from_candid_record_n15(_uploadFile, _downloadFile, value);
+function from_candid_ReviewRequestDelay_n89(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReviewRequestDelay): ReviewRequestDelay {
+    return from_candid_variant_n90(_uploadFile, _downloadFile, value);
 }
-function from_candid_TimeSlotStatus_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TimeSlotStatus): TimeSlotStatus {
-    return from_candid_variant_n40(_uploadFile, _downloadFile, value);
+function from_candid_ReviewRequestSettings_n87(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReviewRequestSettings): ReviewRequestSettings {
+    return from_candid_record_n88(_uploadFile, _downloadFile, value);
 }
-function from_candid_TimeSlot_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TimeSlot): TimeSlot {
-    return from_candid_record_n38(_uploadFile, _downloadFile, value);
+function from_candid_SeasonalPeriod_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _SeasonalPeriod): SeasonalPeriod {
+    return from_candid_record_n47(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n42(_uploadFile, _downloadFile, value);
+function from_candid_TableStatus_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TableStatus): TableStatus {
+    return from_candid_variant_n22(_uploadFile, _downloadFile, value);
 }
-function from_candid_WaitlistEntry_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _WaitlistEntry): WaitlistEntry {
-    return from_candid_record_n4(_uploadFile, _downloadFile, value);
+function from_candid_Table_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Table): Table {
+    return from_candid_record_n20(_uploadFile, _downloadFile, value);
 }
-function from_candid_WaitlistStatus_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _WaitlistStatus): WaitlistStatus {
-    return from_candid_variant_n6(_uploadFile, _downloadFile, value);
+function from_candid_TimeSlotStatus_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TimeSlotStatus): TimeSlotStatus {
+    return from_candid_variant_n60(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
+function from_candid_TimeSlot_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TimeSlot): TimeSlot {
+    return from_candid_record_n58(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n62(_uploadFile, _downloadFile, value);
+}
+function from_candid_WaitlistEntry_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _WaitlistEntry): WaitlistEntry {
+    return from_candid_record_n5(_uploadFile, _downloadFile, value);
+}
+function from_candid_WaitlistStatus_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _WaitlistStatus): WaitlistStatus {
+    return from_candid_variant_n7(_uploadFile, _downloadFile, value);
+}
+function from_candid_Zone_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Zone): Zone {
+    return from_candid_record_n12(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ReservationId]): ReservationId | null {
+function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ReservationId]): ReservationId | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExperienceId]): ExperienceId | null {
+function from_candid_opt_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Array<bigint>]): Array<bigint> | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Table]): Table | null {
-    return value.length === 0 ? null : from_candid_Table_n14(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_SeasonalPeriod]): SeasonalPeriod | null {
-    return value.length === 0 ? null : from_candid_SeasonalPeriod_n34(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_OccupancySettings]): OccupancySettings | null {
+function from_candid_opt_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Array<string>]): Array<string> | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Guest]): Guest | null {
-    return value.length === 0 ? null : from_candid_Guest_n20(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n63(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Reservation]): Reservation | null {
-    return value.length === 0 ? null : from_candid_Reservation_n23(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n66(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_WaitlistEntry]): WaitlistEntry | null {
-    return value.length === 0 ? null : from_candid_WaitlistEntry_n3(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Timestamp]): Timestamp | null {
+function from_candid_opt_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExperienceId]): ExperienceId | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+function from_candid_opt_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Table]): Table | null {
+    return value.length === 0 ? null : from_candid_Table_n19(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_SeasonalPeriod]): SeasonalPeriod | null {
+    return value.length === 0 ? null : from_candid_SeasonalPeriod_n46(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n75(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_OccupancySettings]): OccupancySettings | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    x: bigint;
-    y: bigint;
-    id: _TableId;
-    status: _TableStatus;
-    name: string;
-    seatCount: [] | [bigint];
-    guestName: [] | [string];
-    groupId: [] | [string];
-    capacity: bigint;
-    reservationId: [] | [_ReservationId];
+function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Timestamp]): Timestamp | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n84(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Guest]): Guest | null {
+    return value.length === 0 ? null : from_candid_Guest_n31(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n85(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Reservation]): Reservation | null {
+    return value.length === 0 ? null : from_candid_Reservation_n34(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n94(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_WaitlistEntry]): WaitlistEntry | null {
+    return value.length === 0 ? null : from_candid_WaitlistEntry_n4(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_record_n110(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    total: bigint;
+    guests: Array<_Guest>;
 }): {
-    x: bigint;
-    y: bigint;
-    id: TableId;
-    status: TableStatus;
-    name: string;
-    seatCount?: bigint;
-    guestName?: string;
-    groupId?: string;
-    capacity: bigint;
-    reservationId?: ReservationId;
+    total: bigint;
+    guests: Array<Guest>;
 } {
     return {
-        x: value.x,
-        y: value.y,
-        id: value.id,
-        status: from_candid_TableStatus_n16(_uploadFile, _downloadFile, value.status),
-        name: value.name,
-        seatCount: record_opt_to_undefined(from_candid_opt_n18(_uploadFile, _downloadFile, value.seatCount)),
-        guestName: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.guestName)),
-        groupId: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.groupId)),
-        capacity: value.capacity,
-        reservationId: record_opt_to_undefined(from_candid_opt_n19(_uploadFile, _downloadFile, value.reservationId))
+        total: value.total,
+        guests: from_candid_vec_n99(_uploadFile, _downloadFile, value.guests)
     };
 }
-function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _GuestId;
-    reservationIds: Array<_ReservationId>;
-    name: string;
-    createdAt: _Timestamp;
-    tags: Array<string>;
-    email: string;
-    phone: [] | [string];
-}): {
-    id: GuestId;
-    reservationIds: Array<ReservationId>;
-    name: string;
-    createdAt: Timestamp;
-    tags: Array<string>;
-    email: string;
-    phone?: string;
-} {
-    return {
-        id: value.id,
-        reservationIds: value.reservationIds,
-        name: value.name,
-        createdAt: value.createdAt,
-        tags: value.tags,
-        email: value.email,
-        phone: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.phone))
-    };
-}
-function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _ReservationId;
-    status: _ReservationStatus;
-    experienceId: [] | [_ExperienceId];
-    date: string;
-    specialRequests: [] | [string];
-    createdAt: _Timestamp;
-    time: string;
-    stripePaymentIntentId: [] | [string];
-    partySize: bigint;
-    guestId: _GuestId;
-}): {
-    id: ReservationId;
-    status: ReservationStatus;
-    experienceId?: ExperienceId;
-    date: string;
-    specialRequests?: string;
-    createdAt: Timestamp;
-    time: string;
-    stripePaymentIntentId?: string;
-    partySize: bigint;
-    guestId: GuestId;
-} {
-    return {
-        id: value.id,
-        status: from_candid_ReservationStatus_n25(_uploadFile, _downloadFile, value.status),
-        experienceId: record_opt_to_undefined(from_candid_opt_n27(_uploadFile, _downloadFile, value.experienceId)),
-        date: value.date,
-        specialRequests: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.specialRequests)),
-        createdAt: value.createdAt,
-        time: value.time,
-        stripePaymentIntentId: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.stripePaymentIntentId)),
-        partySize: value.partySize,
-        guestId: value.guestId
-    };
-}
-function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: string;
-    dateTo: string;
-    autoActivate: boolean;
-    name: string;
-    capacityOverride: [] | [bigint];
-    activatedZones: Array<string>;
-    isActive: boolean;
-    dateFrom: string;
-}): {
-    id: string;
-    dateTo: string;
-    autoActivate: boolean;
-    name: string;
-    capacityOverride?: bigint;
-    activatedZones: Array<string>;
-    isActive: boolean;
-    dateFrom: string;
-} {
-    return {
-        id: value.id,
-        dateTo: value.dateTo,
-        autoActivate: value.autoActivate,
-        name: value.name,
-        capacityOverride: record_opt_to_undefined(from_candid_opt_n18(_uploadFile, _downloadFile, value.capacityOverride)),
-        activatedZones: value.activatedZones,
-        isActive: value.isActive,
-        dateFrom: value.dateFrom
-    };
-}
-function from_candid_record_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    status: _TimeSlotStatus;
-    time: string;
-    totalSeats: bigint;
-    availableSeats: bigint;
-}): {
-    status: TimeSlotStatus;
-    time: string;
-    totalSeats: bigint;
-    availableSeats: bigint;
-} {
-    return {
-        status: from_candid_TimeSlotStatus_n39(_uploadFile, _downloadFile, value.status),
-        time: value.time,
-        totalSeats: value.totalSeats,
-        availableSeats: value.availableSeats
-    };
-}
-function from_candid_record_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _WaitlistId;
-    status: _WaitlistStatus;
-    date: string;
-    joinedAt: _Timestamp;
-    notifiedAt: [] | [_Timestamp];
-    notes: [] | [string];
-    requestedTime: [] | [string];
-    partySize: bigint;
-    guestId: _GuestId;
-}): {
-    id: WaitlistId;
-    status: WaitlistStatus;
-    date: string;
-    joinedAt: Timestamp;
-    notifiedAt?: Timestamp;
-    notes?: string;
-    requestedTime?: string;
-    partySize: bigint;
-    guestId: GuestId;
-} {
-    return {
-        id: value.id,
-        status: from_candid_WaitlistStatus_n5(_uploadFile, _downloadFile, value.status),
-        date: value.date,
-        joinedAt: value.joinedAt,
-        notifiedAt: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.notifiedAt)),
-        notes: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.notes)),
-        requestedTime: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.requestedTime)),
-        partySize: value.partySize,
-        guestId: value.guestId
-    };
-}
-function from_candid_record_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    timezone: string;
-    integrations: _IntegrationSettings;
-    notifications: _NotificationSettings;
-    openingHour: bigint;
-    guestForm: _GuestFormSettings;
-    fixedClosingDays: Array<_DayOfWeek>;
-    logoUrl: [] | [string];
-    zones: Array<_ZoneCapacity>;
-    tableTypes: Array<_TableType>;
-    reservationRules: _ReservationRules;
-    currency: string;
-    restaurantName: string;
-    closingHour: bigint;
-    contactEmail: string;
-    occupancySettings: [] | [_OccupancySettings];
-    branding: _BrandingSettings;
-    exceptionalClosingDays: Array<_ClosingDay>;
-    services: Array<_ServiceHours>;
-    totalSeatsPerSlot: bigint;
-    slotIntervalMinutes: bigint;
-    contactPhone: string;
-}): {
-    timezone: string;
-    integrations: IntegrationSettings;
-    notifications: NotificationSettings;
-    openingHour: bigint;
-    guestForm: GuestFormSettings;
-    fixedClosingDays: Array<DayOfWeek>;
-    logoUrl?: string;
-    zones: Array<ZoneCapacity>;
-    tableTypes: Array<TableType>;
-    reservationRules: ReservationRules;
-    currency: string;
-    restaurantName: string;
-    closingHour: bigint;
-    contactEmail: string;
-    occupancySettings?: OccupancySettings;
-    branding: BrandingSettings;
-    exceptionalClosingDays: Array<ClosingDay>;
-    services: Array<ServiceHours>;
-    totalSeatsPerSlot: bigint;
-    slotIntervalMinutes: bigint;
-    contactPhone: string;
-} {
-    return {
-        timezone: value.timezone,
-        integrations: from_candid_IntegrationSettings_n45(_uploadFile, _downloadFile, value.integrations),
-        notifications: value.notifications,
-        openingHour: value.openingHour,
-        guestForm: from_candid_GuestFormSettings_n47(_uploadFile, _downloadFile, value.guestForm),
-        fixedClosingDays: value.fixedClosingDays,
-        logoUrl: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.logoUrl)),
-        zones: value.zones,
-        tableTypes: value.tableTypes,
-        reservationRules: value.reservationRules,
-        currency: value.currency,
-        restaurantName: value.restaurantName,
-        closingHour: value.closingHour,
-        contactEmail: value.contactEmail,
-        occupancySettings: record_opt_to_undefined(from_candid_opt_n53(_uploadFile, _downloadFile, value.occupancySettings)),
-        branding: from_candid_BrandingSettings_n54(_uploadFile, _downloadFile, value.branding),
-        exceptionalClosingDays: from_candid_vec_n56(_uploadFile, _downloadFile, value.exceptionalClosingDays),
-        services: value.services,
-        totalSeatsPerSlot: value.totalSeatsPerSlot,
-        slotIntervalMinutes: value.slotIntervalMinutes,
-        contactPhone: value.contactPhone
-    };
-}
-function from_candid_record_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    mollieEnabled: boolean;
-    calendarSyncEnabled: boolean;
-    stripePublicKey: string;
-    stripeEnabled: boolean;
-    apiKey: string;
-    posSystem: [] | [string];
-}): {
-    mollieEnabled: boolean;
-    calendarSyncEnabled: boolean;
-    stripePublicKey: string;
-    stripeEnabled: boolean;
-    apiKey: string;
-    posSystem?: string;
-} {
-    return {
-        mollieEnabled: value.mollieEnabled,
-        calendarSyncEnabled: value.calendarSyncEnabled,
-        stripePublicKey: value.stripePublicKey,
-        stripeEnabled: value.stripeEnabled,
-        apiKey: value.apiKey,
-        posSystem: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.posSystem))
-    };
-}
-function from_candid_record_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    requireAllergies: boolean;
-    requireDietPreferences: boolean;
-    requirePhone: boolean;
-    customQuestions: Array<_CustomQuestion>;
-}): {
-    requireAllergies: boolean;
-    requireDietPreferences: boolean;
-    requirePhone: boolean;
-    customQuestions: Array<CustomQuestion>;
-} {
-    return {
-        requireAllergies: value.requireAllergies,
-        requireDietPreferences: value.requireDietPreferences,
-        requirePhone: value.requirePhone,
-        customQuestions: from_candid_vec_n49(_uploadFile, _downloadFile, value.customQuestions)
-    };
-}
-function from_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: string;
-    labelText: string;
-    questionType: {
-        text: null;
-    } | {
-        dropdown: null;
-    };
-    required: boolean;
-    options: Array<string>;
-}): {
-    id: string;
-    labelText: string;
-    questionType: Variant_text_dropdown;
-    required: boolean;
-    options: Array<string>;
-} {
-    return {
-        id: value.id,
-        labelText: value.labelText,
-        questionType: from_candid_variant_n52(_uploadFile, _downloadFile, value.questionType),
-        required: value.required,
-        options: value.options
-    };
-}
-function from_candid_record_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    confirmationText: string;
-    primaryColor: string;
-    accentColor: string;
-    logoUrl: [] | [string];
-    defaultLanguage: string;
-    welcomeText: string;
-}): {
-    confirmationText: string;
-    primaryColor: string;
-    accentColor: string;
-    logoUrl?: string;
-    defaultLanguage: string;
-    welcomeText: string;
-} {
-    return {
-        confirmationText: value.confirmationText,
-        primaryColor: value.primaryColor,
-        accentColor: value.accentColor,
-        logoUrl: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.logoUrl)),
-        defaultLanguage: value.defaultLanguage,
-        welcomeText: value.welcomeText
-    };
-}
-function from_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    date: string;
-    serviceId: [] | [string];
-    reason: string;
-}): {
-    date: string;
-    serviceId?: string;
-    reason: string;
-} {
-    return {
-        date: value.date,
-        serviceId: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.serviceId)),
-        reason: value.reason
-    };
-}
-function from_candid_record_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    tables: Array<_Table>;
-    updatedAt: _Timestamp;
-}): {
-    tables: Array<Table>;
-    updatedAt: Timestamp;
-} {
-    return {
-        tables: from_candid_vec_n61(_uploadFile, _downloadFile, value.tables),
-        updatedAt: value.updatedAt
-    };
-}
-function from_candid_record_n81(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n115(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     suggestionId: string;
     date: string;
     createdAt: bigint;
@@ -2338,10 +2758,530 @@ function from_candid_record_n81(_uploadFile: (file: ExternalBlob) => Promise<Uin
         date: value.date,
         createdAt: value.createdAt,
         reasoning: value.reasoning,
-        zonePreference: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.zonePreference)),
+        zonePreference: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.zonePreference)),
         partySize: value.partySize,
         confidence: value.confidence,
         suggestedTableIds: value.suggestedTableIds
+    };
+}
+function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    boundaries: [] | [string];
+    name: string;
+    color: string;
+    maxGuests: bigint;
+}): {
+    id: string;
+    boundaries?: string;
+    name: string;
+    color: string;
+    maxGuests: bigint;
+} {
+    return {
+        id: value.id,
+        boundaries: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.boundaries)),
+        name: value.name,
+        color: value.color,
+        maxGuests: value.maxGuests
+    };
+}
+function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    x: bigint;
+    y: bigint;
+    id: _TableId;
+    status: _TableStatus;
+    name: string;
+    zone: [] | [string];
+    seatCount: [] | [bigint];
+    guestName: [] | [string];
+    groupId: [] | [string];
+    capacity: bigint;
+    reservationId: [] | [_ReservationId];
+}): {
+    x: bigint;
+    y: bigint;
+    id: TableId;
+    status: TableStatus;
+    name: string;
+    zone?: string;
+    seatCount?: bigint;
+    guestName?: string;
+    groupId?: string;
+    capacity: bigint;
+    reservationId?: ReservationId;
+} {
+    return {
+        x: value.x,
+        y: value.y,
+        id: value.id,
+        status: from_candid_TableStatus_n21(_uploadFile, _downloadFile, value.status),
+        name: value.name,
+        zone: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.zone)),
+        seatCount: record_opt_to_undefined(from_candid_opt_n23(_uploadFile, _downloadFile, value.seatCount)),
+        guestName: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.guestName)),
+        groupId: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.groupId)),
+        capacity: value.capacity,
+        reservationId: record_opt_to_undefined(from_candid_opt_n24(_uploadFile, _downloadFile, value.reservationId))
+    };
+}
+function from_candid_record_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _ExperienceId;
+    maxCapacity: bigint;
+    dayOfWeek: [] | [Array<bigint>];
+    name: string;
+    pricePerPerson: bigint;
+    description: string;
+    isActive: boolean;
+    serviceIds: [] | [Array<string>];
+    required: boolean;
+}): {
+    id: ExperienceId;
+    maxCapacity: bigint;
+    dayOfWeek?: Array<bigint>;
+    name: string;
+    pricePerPerson: bigint;
+    description: string;
+    isActive: boolean;
+    serviceIds?: Array<string>;
+    required: boolean;
+} {
+    return {
+        id: value.id,
+        maxCapacity: value.maxCapacity,
+        dayOfWeek: record_opt_to_undefined(from_candid_opt_n29(_uploadFile, _downloadFile, value.dayOfWeek)),
+        name: value.name,
+        pricePerPerson: value.pricePerPerson,
+        description: value.description,
+        isActive: value.isActive,
+        serviceIds: record_opt_to_undefined(from_candid_opt_n30(_uploadFile, _downloadFile, value.serviceIds)),
+        required: value.required
+    };
+}
+function from_candid_record_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _GuestId;
+    reservationIds: Array<_ReservationId>;
+    name: string;
+    createdAt: _Timestamp;
+    tags: Array<string>;
+    email: string;
+    phone: [] | [string];
+}): {
+    id: GuestId;
+    reservationIds: Array<ReservationId>;
+    name: string;
+    createdAt: Timestamp;
+    tags: Array<string>;
+    email: string;
+    phone?: string;
+} {
+    return {
+        id: value.id,
+        reservationIds: value.reservationIds,
+        name: value.name,
+        createdAt: value.createdAt,
+        tags: value.tags,
+        email: value.email,
+        phone: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.phone))
+    };
+}
+function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _ReservationId;
+    status: _ReservationStatus;
+    experienceId: [] | [_ExperienceId];
+    date: string;
+    specialRequests: [] | [string];
+    createdAt: _Timestamp;
+    time: string;
+    zone: [] | [string];
+    tableId: [] | [string];
+    updatedAt: _Timestamp;
+    notes: [] | [string];
+    stripePaymentIntentId: [] | [string];
+    partySize: bigint;
+    changes: Array<_ReservationChange>;
+    guestId: _GuestId;
+}): {
+    id: ReservationId;
+    status: ReservationStatus;
+    experienceId?: ExperienceId;
+    date: string;
+    specialRequests?: string;
+    createdAt: Timestamp;
+    time: string;
+    zone?: string;
+    tableId?: string;
+    updatedAt: Timestamp;
+    notes?: string;
+    stripePaymentIntentId?: string;
+    partySize: bigint;
+    changes: Array<ReservationChange>;
+    guestId: GuestId;
+} {
+    return {
+        id: value.id,
+        status: from_candid_ReservationStatus_n36(_uploadFile, _downloadFile, value.status),
+        experienceId: record_opt_to_undefined(from_candid_opt_n38(_uploadFile, _downloadFile, value.experienceId)),
+        date: value.date,
+        specialRequests: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.specialRequests)),
+        createdAt: value.createdAt,
+        time: value.time,
+        zone: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.zone)),
+        tableId: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.tableId)),
+        updatedAt: value.updatedAt,
+        notes: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.notes)),
+        stripePaymentIntentId: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.stripePaymentIntentId)),
+        partySize: value.partySize,
+        changes: value.changes,
+        guestId: value.guestId
+    };
+}
+function from_candid_record_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    dateTo: string;
+    autoActivate: boolean;
+    name: string;
+    capacityOverride: [] | [bigint];
+    activatedZones: Array<string>;
+    isActive: boolean;
+    dateFrom: string;
+}): {
+    id: string;
+    dateTo: string;
+    autoActivate: boolean;
+    name: string;
+    capacityOverride?: bigint;
+    activatedZones: Array<string>;
+    isActive: boolean;
+    dateFrom: string;
+} {
+    return {
+        id: value.id,
+        dateTo: value.dateTo,
+        autoActivate: value.autoActivate,
+        name: value.name,
+        capacityOverride: record_opt_to_undefined(from_candid_opt_n23(_uploadFile, _downloadFile, value.capacityOverride)),
+        activatedZones: value.activatedZones,
+        isActive: value.isActive,
+        dateFrom: value.dateFrom
+    };
+}
+function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _WaitlistId;
+    status: _WaitlistStatus;
+    date: string;
+    joinedAt: _Timestamp;
+    notifiedAt: [] | [_Timestamp];
+    notes: [] | [string];
+    requestedTime: [] | [string];
+    partySize: bigint;
+    guestId: _GuestId;
+}): {
+    id: WaitlistId;
+    status: WaitlistStatus;
+    date: string;
+    joinedAt: Timestamp;
+    notifiedAt?: Timestamp;
+    notes?: string;
+    requestedTime?: string;
+    partySize: bigint;
+    guestId: GuestId;
+} {
+    return {
+        id: value.id,
+        status: from_candid_WaitlistStatus_n6(_uploadFile, _downloadFile, value.status),
+        date: value.date,
+        joinedAt: value.joinedAt,
+        notifiedAt: record_opt_to_undefined(from_candid_opt_n8(_uploadFile, _downloadFile, value.notifiedAt)),
+        notes: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.notes)),
+        requestedTime: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.requestedTime)),
+        partySize: value.partySize,
+        guestId: value.guestId
+    };
+}
+function from_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    action: string;
+    oldValue: [] | [string];
+    callerName: string;
+    callerRole: string;
+    page: string;
+    newValue: [] | [string];
+    summary: string;
+    timestamp: bigint;
+    callerPrincipal: string;
+}): {
+    id: string;
+    action: string;
+    oldValue?: string;
+    callerName: string;
+    callerRole: string;
+    page: string;
+    newValue?: string;
+    summary: string;
+    timestamp: bigint;
+    callerPrincipal: string;
+} {
+    return {
+        id: value.id,
+        action: value.action,
+        oldValue: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.oldValue)),
+        callerName: value.callerName,
+        callerRole: value.callerRole,
+        page: value.page,
+        newValue: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.newValue)),
+        summary: value.summary,
+        timestamp: value.timestamp,
+        callerPrincipal: value.callerPrincipal
+    };
+}
+function from_candid_record_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    total: bigint;
+    entries: Array<_AuditLogEntry>;
+}): {
+    total: bigint;
+    entries: Array<AuditLogEntry>;
+} {
+    return {
+        total: value.total,
+        entries: from_candid_vec_n49(_uploadFile, _downloadFile, value.entries)
+    };
+}
+function from_candid_record_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    fixedClosingDays: Array<bigint>;
+    slots: Array<_TimeSlot>;
+}): {
+    fixedClosingDays: Array<bigint>;
+    slots: Array<TimeSlot>;
+} {
+    return {
+        fixedClosingDays: value.fixedClosingDays,
+        slots: from_candid_vec_n56(_uploadFile, _downloadFile, value.slots)
+    };
+}
+function from_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    status: _TimeSlotStatus;
+    time: string;
+    totalSeats: bigint;
+    availableSeats: bigint;
+}): {
+    status: TimeSlotStatus;
+    time: string;
+    totalSeats: bigint;
+    availableSeats: bigint;
+} {
+    return {
+        status: from_candid_TimeSlotStatus_n59(_uploadFile, _downloadFile, value.status),
+        time: value.time,
+        totalSeats: value.totalSeats,
+        availableSeats: value.availableSeats
+    };
+}
+function from_candid_record_n65(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    timezone: string;
+    integrations: _IntegrationSettings;
+    notifications: _NotificationSettings;
+    openingHour: bigint;
+    guestForm: _GuestFormSettings;
+    fixedClosingDays: Array<_DayOfWeek>;
+    logoUrl: [] | [string];
+    zones: Array<_ZoneCapacity>;
+    tableTypes: Array<_TableType>;
+    reservationRules: _ReservationRules;
+    zoneDefs: Array<_Zone>;
+    currency: string;
+    restaurantName: string;
+    closingHour: bigint;
+    contactEmail: string;
+    occupancySettings: [] | [_OccupancySettings];
+    branding: _BrandingSettings;
+    exceptionalClosingDays: Array<_ClosingDay>;
+    services: Array<_ServiceHours>;
+    totalSeatsPerSlot: bigint;
+    slotIntervalMinutes: bigint;
+    contactPhone: string;
+}): {
+    timezone: string;
+    integrations: IntegrationSettings;
+    notifications: NotificationSettings;
+    openingHour: bigint;
+    guestForm: GuestFormSettings;
+    fixedClosingDays: Array<DayOfWeek>;
+    logoUrl?: string;
+    zones: Array<ZoneCapacity>;
+    tableTypes: Array<TableType>;
+    reservationRules: ReservationRules;
+    zoneDefs: Array<Zone>;
+    currency: string;
+    restaurantName: string;
+    closingHour: bigint;
+    contactEmail: string;
+    occupancySettings?: OccupancySettings;
+    branding: BrandingSettings;
+    exceptionalClosingDays: Array<ClosingDay>;
+    services: Array<ServiceHours>;
+    totalSeatsPerSlot: bigint;
+    slotIntervalMinutes: bigint;
+    contactPhone: string;
+} {
+    return {
+        timezone: value.timezone,
+        integrations: from_candid_IntegrationSettings_n66(_uploadFile, _downloadFile, value.integrations),
+        notifications: value.notifications,
+        openingHour: value.openingHour,
+        guestForm: from_candid_GuestFormSettings_n68(_uploadFile, _downloadFile, value.guestForm),
+        fixedClosingDays: value.fixedClosingDays,
+        logoUrl: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.logoUrl)),
+        zones: value.zones,
+        tableTypes: value.tableTypes,
+        reservationRules: value.reservationRules,
+        zoneDefs: from_candid_vec_n74(_uploadFile, _downloadFile, value.zoneDefs),
+        currency: value.currency,
+        restaurantName: value.restaurantName,
+        closingHour: value.closingHour,
+        contactEmail: value.contactEmail,
+        occupancySettings: record_opt_to_undefined(from_candid_opt_n75(_uploadFile, _downloadFile, value.occupancySettings)),
+        branding: from_candid_BrandingSettings_n76(_uploadFile, _downloadFile, value.branding),
+        exceptionalClosingDays: from_candid_vec_n78(_uploadFile, _downloadFile, value.exceptionalClosingDays),
+        services: value.services,
+        totalSeatsPerSlot: value.totalSeatsPerSlot,
+        slotIntervalMinutes: value.slotIntervalMinutes,
+        contactPhone: value.contactPhone
+    };
+}
+function from_candid_record_n67(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    mollieEnabled: boolean;
+    calendarSyncEnabled: boolean;
+    stripePublicKey: string;
+    stripeEnabled: boolean;
+    apiKey: string;
+    posSystem: [] | [string];
+}): {
+    mollieEnabled: boolean;
+    calendarSyncEnabled: boolean;
+    stripePublicKey: string;
+    stripeEnabled: boolean;
+    apiKey: string;
+    posSystem?: string;
+} {
+    return {
+        mollieEnabled: value.mollieEnabled,
+        calendarSyncEnabled: value.calendarSyncEnabled,
+        stripePublicKey: value.stripePublicKey,
+        stripeEnabled: value.stripeEnabled,
+        apiKey: value.apiKey,
+        posSystem: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.posSystem))
+    };
+}
+function from_candid_record_n69(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    requireAllergies: boolean;
+    requireDietPreferences: boolean;
+    requirePhone: boolean;
+    showBabiesChildren: boolean;
+    customQuestions: Array<_CustomQuestion>;
+}): {
+    requireAllergies: boolean;
+    requireDietPreferences: boolean;
+    requirePhone: boolean;
+    showBabiesChildren: boolean;
+    customQuestions: Array<CustomQuestion>;
+} {
+    return {
+        requireAllergies: value.requireAllergies,
+        requireDietPreferences: value.requireDietPreferences,
+        requirePhone: value.requirePhone,
+        showBabiesChildren: value.showBabiesChildren,
+        customQuestions: from_candid_vec_n70(_uploadFile, _downloadFile, value.customQuestions)
+    };
+}
+function from_candid_record_n72(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    labelText: string;
+    questionType: {
+        text: null;
+    } | {
+        dropdown: null;
+    };
+    required: boolean;
+    options: Array<string>;
+}): {
+    id: string;
+    labelText: string;
+    questionType: Variant_text_dropdown;
+    required: boolean;
+    options: Array<string>;
+} {
+    return {
+        id: value.id,
+        labelText: value.labelText,
+        questionType: from_candid_variant_n73(_uploadFile, _downloadFile, value.questionType),
+        required: value.required,
+        options: value.options
+    };
+}
+function from_candid_record_n77(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    confirmationText: string;
+    primaryColor: string;
+    accentColor: string;
+    logoUrl: [] | [string];
+    defaultLanguage: string;
+    welcomeText: string;
+}): {
+    confirmationText: string;
+    primaryColor: string;
+    accentColor: string;
+    logoUrl?: string;
+    defaultLanguage: string;
+    welcomeText: string;
+} {
+    return {
+        confirmationText: value.confirmationText,
+        primaryColor: value.primaryColor,
+        accentColor: value.accentColor,
+        logoUrl: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.logoUrl)),
+        defaultLanguage: value.defaultLanguage,
+        welcomeText: value.welcomeText
+    };
+}
+function from_candid_record_n80(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    date: string;
+    serviceId: [] | [string];
+    reason: string;
+}): {
+    date: string;
+    serviceId?: string;
+    reason: string;
+} {
+    return {
+        date: value.date,
+        serviceId: record_opt_to_undefined(from_candid_opt_n9(_uploadFile, _downloadFile, value.serviceId)),
+        reason: value.reason
+    };
+}
+function from_candid_record_n82(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    tables: Array<_Table>;
+    updatedAt: _Timestamp;
+}): {
+    tables: Array<Table>;
+    updatedAt: Timestamp;
+} {
+    return {
+        tables: from_candid_vec_n83(_uploadFile, _downloadFile, value.tables),
+        updatedAt: value.updatedAt
+    };
+}
+function from_candid_record_n88(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    enabled: boolean;
+    message: string;
+    delay: _ReviewRequestDelay;
+}): {
+    enabled: boolean;
+    message: string;
+    delay: ReviewRequestDelay;
+} {
+    return {
+        enabled: value.enabled,
+        message: value.message,
+        delay: from_candid_ReviewRequestDelay_n89(_uploadFile, _downloadFile, value.delay)
     };
 }
 function from_candid_variant_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -2363,7 +3303,121 @@ function from_candid_variant_n1(_uploadFile: (file: ExternalBlob) => Promise<Uin
         err: value.err
     } : value;
 }
-function from_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _Zone;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Zone;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_Zone_n11(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n104(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<_Reservation>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<Reservation>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_vec_n105(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n113(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _AISeatingSuggestion;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: AISeatingSuggestion;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_AISeatingSuggestion_n114(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n116(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: bigint;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: bigint;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: null;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: string;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: _TableAssignment;
 } | {
     err: string;
@@ -2382,7 +3436,7 @@ function from_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Ui
         err: value.err
     } : value;
 }
-function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: _Table;
 } | {
     err: string;
@@ -2395,13 +3449,13 @@ function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_Table_n14(_uploadFile, _downloadFile, value.ok)
+        ok: from_candid_Table_n19(_uploadFile, _downloadFile, value.ok)
     } : "err" in value ? {
         __kind__: "err",
         err: value.err
     } : value;
 }
-function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     occupied: null;
 } | {
     reserved: null;
@@ -2412,7 +3466,26 @@ function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): TableStatus {
     return "occupied" in value ? TableStatus.occupied : "reserved" in value ? TableStatus.reserved : "empty" in value ? TableStatus.empty : "unavailable" in value ? TableStatus.unavailable : value;
 }
-function from_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _WaitlistEntry;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: WaitlistEntry;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_WaitlistEntry_n4(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     cancelled: null;
 } | {
     late: null;
@@ -2429,7 +3502,7 @@ function from_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): ReservationStatus {
     return "cancelled" in value ? ReservationStatus.cancelled : "late" in value ? ReservationStatus.late : "seated" in value ? ReservationStatus.seated : "waitlist" in value ? ReservationStatus.waitlist : "departed" in value ? ReservationStatus.departed : "confirmed" in value ? ReservationStatus.confirmed : "not_arrived" in value ? ReservationStatus.not_arrived : value;
 }
-function from_candid_variant_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: _Reservation;
 } | {
     err: string;
@@ -2442,51 +3515,114 @@ function from_candid_variant_n28(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_Reservation_n23(_uploadFile, _downloadFile, value.ok)
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
-    } : value;
-}
-function from_candid_variant_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: null;
-} | {
-    err: string;
-}): {
-    __kind__: "ok";
-    ok: null;
-} | {
-    __kind__: "err";
-    err: string;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: value.ok
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
-    } : value;
-}
-function from_candid_variant_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: Array<string>;
-} | {
-    err: string;
-}): {
-    __kind__: "ok";
-    ok: Array<string>;
-} | {
-    __kind__: "err";
-    err: string;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: value.ok
+        ok: from_candid_Reservation_n34(_uploadFile, _downloadFile, value.ok)
     } : "err" in value ? {
         __kind__: "err",
         err: value.err
     } : value;
 }
 function from_candid_variant_n40(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _TableGroupDefinition;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: TableGroupDefinition;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: boolean;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: boolean;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<string>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<string>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<_AuditLogEntry>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<AuditLogEntry>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_vec_n49(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: {
+        total: bigint;
+        entries: Array<_AuditLogEntry>;
+    };
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: {
+        total: bigint;
+        entries: Array<AuditLogEntry>;
+    };
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_record_n53(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     full: null;
 } | {
     available: null;
@@ -2495,7 +3631,7 @@ function from_candid_variant_n40(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): TimeSlotStatus {
     return "full" in value ? TimeSlotStatus.full : "available" in value ? TimeSlotStatus.available : "limited" in value ? TimeSlotStatus.limited : value;
 }
-function from_candid_variant_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -2504,15 +3640,29 @@ function from_candid_variant_n42(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_variant_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    text: null;
+function from_candid_variant_n63(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _RestaurantExtendedConfig;
 } | {
-    dropdown: null;
-}): Variant_text_dropdown {
-    return "text" in value ? Variant_text_dropdown.text : "dropdown" in value ? Variant_text_dropdown.dropdown : value;
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: RestaurantExtendedConfig;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_RestaurantExtendedConfig_n64(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
 }
-function from_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     expired: null;
+} | {
+    removed_by_staff: null;
 } | {
     confirmed: null;
 } | {
@@ -2520,9 +3670,82 @@ function from_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uin
 } | {
     waiting: null;
 }): WaitlistStatus {
-    return "expired" in value ? WaitlistStatus.expired : "confirmed" in value ? WaitlistStatus.confirmed : "offered" in value ? WaitlistStatus.offered : "waiting" in value ? WaitlistStatus.waiting : value;
+    return "expired" in value ? WaitlistStatus.expired : "removed_by_staff" in value ? WaitlistStatus.removed_by_staff : "confirmed" in value ? WaitlistStatus.confirmed : "offered" in value ? WaitlistStatus.offered : "waiting" in value ? WaitlistStatus.waiting : value;
 }
-function from_candid_variant_n67(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n73(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    text: null;
+} | {
+    dropdown: null;
+}): Variant_text_dropdown {
+    return "text" in value ? Variant_text_dropdown.text : "dropdown" in value ? Variant_text_dropdown.dropdown : value;
+}
+function from_candid_variant_n86(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<_ReservationChange>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<ReservationChange>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n90(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    hour1: null;
+} | {
+    hour2: null;
+} | {
+    hour24: null;
+}): ReviewRequestDelay {
+    return "hour1" in value ? ReviewRequestDelay.hour1 : "hour2" in value ? ReviewRequestDelay.hour2 : "hour24" in value ? ReviewRequestDelay.hour24 : value;
+}
+function from_candid_variant_n92(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<_TableGroupDefinition>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<TableGroupDefinition>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n95(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: Array<_Zone>;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: Array<Zone>;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_vec_n74(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_variant_n96(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: Array<_Table>;
 } | {
     err: string;
@@ -2535,151 +3758,124 @@ function from_candid_variant_n67(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_vec_n61(_uploadFile, _downloadFile, value.ok)
+        ok: from_candid_vec_n83(_uploadFile, _downloadFile, value.ok)
     } : "err" in value ? {
         __kind__: "err",
         err: value.err
     } : value;
 }
-function from_candid_variant_n74(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: _WaitlistEntry;
-} | {
-    err: string;
-}): {
-    __kind__: "ok";
-    ok: WaitlistEntry;
-} | {
-    __kind__: "err";
-    err: string;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: from_candid_WaitlistEntry_n3(_uploadFile, _downloadFile, value.ok)
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
-    } : value;
+function from_candid_vec_n105(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Reservation>): Array<Reservation> {
+    return value.map((x)=>from_candid_Reservation_n34(_uploadFile, _downloadFile, x));
 }
-function from_candid_variant_n79(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: _AISeatingSuggestion;
-} | {
-    err: string;
-}): {
-    __kind__: "ok";
-    ok: AISeatingSuggestion;
-} | {
-    __kind__: "err";
-    err: string;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: from_candid_AISeatingSuggestion_n80(_uploadFile, _downloadFile, value.ok)
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
-    } : value;
+function from_candid_vec_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_AuditLogEntry>): Array<AuditLogEntry> {
+    return value.map((x)=>from_candid_AuditLogEntry_n50(_uploadFile, _downloadFile, x));
 }
-function from_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: string;
-} | {
-    err: string;
-}): {
-    __kind__: "ok";
-    ok: string;
-} | {
-    __kind__: "err";
-    err: string;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: value.ok
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
-    } : value;
+function from_candid_vec_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_TimeSlot>): Array<TimeSlot> {
+    return value.map((x)=>from_candid_TimeSlot_n57(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_TimeSlot>): Array<TimeSlot> {
-    return value.map((x)=>from_candid_TimeSlot_n37(_uploadFile, _downloadFile, x));
+function from_candid_vec_n70(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CustomQuestion>): Array<CustomQuestion> {
+    return value.map((x)=>from_candid_CustomQuestion_n71(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CustomQuestion>): Array<CustomQuestion> {
-    return value.map((x)=>from_candid_CustomQuestion_n50(_uploadFile, _downloadFile, x));
+function from_candid_vec_n74(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Zone>): Array<Zone> {
+    return value.map((x)=>from_candid_Zone_n11(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ClosingDay>): Array<ClosingDay> {
-    return value.map((x)=>from_candid_ClosingDay_n57(_uploadFile, _downloadFile, x));
+function from_candid_vec_n78(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ClosingDay>): Array<ClosingDay> {
+    return value.map((x)=>from_candid_ClosingDay_n79(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Table>): Array<Table> {
-    return value.map((x)=>from_candid_Table_n14(_uploadFile, _downloadFile, x));
+function from_candid_vec_n83(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Table>): Array<Table> {
+    return value.map((x)=>from_candid_Table_n19(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_SeasonalPeriod>): Array<SeasonalPeriod> {
-    return value.map((x)=>from_candid_SeasonalPeriod_n34(_uploadFile, _downloadFile, x));
+function from_candid_vec_n91(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_SeasonalPeriod>): Array<SeasonalPeriod> {
+    return value.map((x)=>from_candid_SeasonalPeriod_n46(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n65(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_WaitlistEntry>): Array<WaitlistEntry> {
-    return value.map((x)=>from_candid_WaitlistEntry_n3(_uploadFile, _downloadFile, x));
+function from_candid_vec_n93(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_WaitlistEntry>): Array<WaitlistEntry> {
+    return value.map((x)=>from_candid_WaitlistEntry_n4(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n68(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Guest>): Array<Guest> {
-    return value.map((x)=>from_candid_Guest_n20(_uploadFile, _downloadFile, x));
+function from_candid_vec_n98(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Experience>): Array<Experience> {
+    return value.map((x)=>from_candid_Experience_n27(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n73(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Reservation>): Array<Reservation> {
-    return value.map((x)=>from_candid_Reservation_n23(_uploadFile, _downloadFile, x));
+function from_candid_vec_n99(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Guest>): Array<Guest> {
+    return value.map((x)=>from_candid_Guest_n31(_uploadFile, _downloadFile, x));
 }
-function to_candid_BrandingSettings_n82(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: BrandingSettings): _BrandingSettings {
-    return to_candid_record_n83(_uploadFile, _downloadFile, value);
+function to_candid_BrandingSettings_n117(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: BrandingSettings): _BrandingSettings {
+    return to_candid_record_n118(_uploadFile, _downloadFile, value);
 }
-function to_candid_ClosingDay_n86(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ClosingDay): _ClosingDay {
-    return to_candid_record_n87(_uploadFile, _downloadFile, value);
+function to_candid_ClosingDay_n121(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ClosingDay): _ClosingDay {
+    return to_candid_record_n122(_uploadFile, _downloadFile, value);
 }
-function to_candid_CustomQuestion_n91(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CustomQuestion): _CustomQuestion {
-    return to_candid_record_n92(_uploadFile, _downloadFile, value);
+function to_candid_CustomQuestion_n128(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CustomQuestion): _CustomQuestion {
+    return to_candid_record_n129(_uploadFile, _downloadFile, value);
 }
-function to_candid_GuestFormSettings_n88(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: GuestFormSettings): _GuestFormSettings {
-    return to_candid_record_n89(_uploadFile, _downloadFile, value);
+function to_candid_Experience_n123(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Experience): _Experience {
+    return to_candid_record_n124(_uploadFile, _downloadFile, value);
 }
-function to_candid_IntegrationSettings_n94(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: IntegrationSettings): _IntegrationSettings {
-    return to_candid_record_n95(_uploadFile, _downloadFile, value);
+function to_candid_GuestFormSettings_n125(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: GuestFormSettings): _GuestFormSettings {
+    return to_candid_record_n126(_uploadFile, _downloadFile, value);
 }
-function to_candid_ReservationFilter_n69(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationFilter): _ReservationFilter {
-    return to_candid_record_n70(_uploadFile, _downloadFile, value);
+function to_candid_IntegrationSettings_n131(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: IntegrationSettings): _IntegrationSettings {
+    return to_candid_record_n132(_uploadFile, _downloadFile, value);
 }
-function to_candid_ReservationStatus_n71(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationStatus): _ReservationStatus {
-    return to_candid_variant_n72(_uploadFile, _downloadFile, value);
+function to_candid_ReservationFilter_n100(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationFilter): _ReservationFilter {
+    return to_candid_record_n101(_uploadFile, _downloadFile, value);
 }
-function to_candid_SeasonalPeriod_n75(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: SeasonalPeriod): _SeasonalPeriod {
-    return to_candid_record_n76(_uploadFile, _downloadFile, value);
+function to_candid_ReservationStatus_n102(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationStatus): _ReservationStatus {
+    return to_candid_variant_n103(_uploadFile, _downloadFile, value);
 }
-function to_candid_TableStatus_n77(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: TableStatus): _TableStatus {
-    return to_candid_variant_n78(_uploadFile, _downloadFile, value);
+function to_candid_ReviewRequestDelay_n106(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReviewRequestDelay): _ReviewRequestDelay {
+    return to_candid_variant_n107(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserRole_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n11(_uploadFile, _downloadFile, value);
+function to_candid_SeasonalPeriod_n108(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: SeasonalPeriod): _SeasonalPeriod {
+    return to_candid_record_n109(_uploadFile, _downloadFile, value);
+}
+function to_candid_TableStatus_n111(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: TableStatus): _TableStatus {
+    return to_candid_variant_n112(_uploadFile, _downloadFile, value);
+}
+function to_candid_UserRole_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n16(_uploadFile, _downloadFile, value);
+}
+function to_candid_opt_n119(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OccupancySettings | null): [] | [_OccupancySettings] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_opt_n133(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationStatus | null): [] | [_ReservationStatus] {
+    return value === null ? candid_none() : candid_some(to_candid_ReservationStatus_n102(_uploadFile, _downloadFile, value));
 }
 function to_candid_opt_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {
     return value === null ? candid_none() : candid_some(value);
 }
-function to_candid_opt_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExperienceId | null): [] | [_ExperienceId] {
+function to_candid_opt_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<string> | null): [] | [Array<string>] {
     return value === null ? candid_none() : candid_some(value);
 }
-function to_candid_opt_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: GuestId | null): [] | [_GuestId] {
+function to_candid_opt_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<bigint> | null): [] | [Array<bigint>] {
     return value === null ? candid_none() : candid_some(value);
 }
-function to_candid_opt_n84(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OccupancySettings | null): [] | [_OccupancySettings] {
+function to_candid_opt_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExperienceId | null): [] | [_ExperienceId] {
     return value === null ? candid_none() : candid_some(value);
 }
-function to_candid_record_n70(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_opt_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: GuestId | null): [] | [_GuestId] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_opt_n97(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: bigint | null): [] | [bigint] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_record_n101(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     status?: ReservationStatus;
     date?: string;
+    time?: string;
     guestId?: GuestId;
 }): {
     status: [] | [_ReservationStatus];
     date: [] | [string];
+    time: [] | [string];
     guestId: [] | [_GuestId];
 } {
     return {
-        status: value.status ? candid_some(to_candid_ReservationStatus_n71(_uploadFile, _downloadFile, value.status)) : candid_none(),
+        status: value.status ? candid_some(to_candid_ReservationStatus_n102(_uploadFile, _downloadFile, value.status)) : candid_none(),
         date: value.date ? candid_some(value.date) : candid_none(),
+        time: value.time ? candid_some(value.time) : candid_none(),
         guestId: value.guestId ? candid_some(value.guestId) : candid_none()
     };
 }
-function to_candid_record_n76(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n109(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     dateTo: string;
     autoActivate: boolean;
@@ -2709,7 +3905,7 @@ function to_candid_record_n76(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         dateFrom: value.dateFrom
     };
 }
-function to_candid_record_n83(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n118(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     confirmationText: string;
     primaryColor: string;
     accentColor: string;
@@ -2733,7 +3929,7 @@ function to_candid_record_n83(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         welcomeText: value.welcomeText
     };
 }
-function to_candid_record_n87(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n122(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     date: string;
     serviceId?: string;
     reason: string;
@@ -2748,25 +3944,61 @@ function to_candid_record_n87(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         reason: value.reason
     };
 }
-function to_candid_record_n89(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n124(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: ExperienceId;
+    maxCapacity: bigint;
+    dayOfWeek?: Array<bigint>;
+    name: string;
+    pricePerPerson: bigint;
+    description: string;
+    isActive: boolean;
+    serviceIds?: Array<string>;
+    required: boolean;
+}): {
+    id: _ExperienceId;
+    maxCapacity: bigint;
+    dayOfWeek: [] | [Array<bigint>];
+    name: string;
+    pricePerPerson: bigint;
+    description: string;
+    isActive: boolean;
+    serviceIds: [] | [Array<string>];
+    required: boolean;
+} {
+    return {
+        id: value.id,
+        maxCapacity: value.maxCapacity,
+        dayOfWeek: value.dayOfWeek ? candid_some(value.dayOfWeek) : candid_none(),
+        name: value.name,
+        pricePerPerson: value.pricePerPerson,
+        description: value.description,
+        isActive: value.isActive,
+        serviceIds: value.serviceIds ? candid_some(value.serviceIds) : candid_none(),
+        required: value.required
+    };
+}
+function to_candid_record_n126(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     requireAllergies: boolean;
     requireDietPreferences: boolean;
     requirePhone: boolean;
+    showBabiesChildren: boolean;
     customQuestions: Array<CustomQuestion>;
 }): {
     requireAllergies: boolean;
     requireDietPreferences: boolean;
     requirePhone: boolean;
+    showBabiesChildren: boolean;
     customQuestions: Array<_CustomQuestion>;
 } {
     return {
         requireAllergies: value.requireAllergies,
         requireDietPreferences: value.requireDietPreferences,
         requirePhone: value.requirePhone,
-        customQuestions: to_candid_vec_n90(_uploadFile, _downloadFile, value.customQuestions)
+        showBabiesChildren: value.showBabiesChildren,
+        customQuestions: to_candid_vec_n127(_uploadFile, _downloadFile, value.customQuestions)
     };
 }
-function to_candid_record_n92(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n129(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     labelText: string;
     questionType: Variant_text_dropdown;
@@ -2786,12 +4018,12 @@ function to_candid_record_n92(_uploadFile: (file: ExternalBlob) => Promise<Uint8
     return {
         id: value.id,
         labelText: value.labelText,
-        questionType: to_candid_variant_n93(_uploadFile, _downloadFile, value.questionType),
+        questionType: to_candid_variant_n130(_uploadFile, _downloadFile, value.questionType),
         required: value.required,
         options: value.options
     };
 }
-function to_candid_record_n95(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n132(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     mollieEnabled: boolean;
     calendarSyncEnabled: boolean;
     stripePublicKey: string;
@@ -2815,22 +4047,7 @@ function to_candid_record_n95(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         posSystem: value.posSystem ? candid_some(value.posSystem) : candid_none()
     };
 }
-function to_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
-    admin: null;
-} | {
-    user: null;
-} | {
-    guest: null;
-} {
-    return value == UserRole.admin ? {
-        admin: null
-    } : value == UserRole.user ? {
-        user: null
-    } : value == UserRole.guest ? {
-        guest: null
-    } : value;
-}
-function to_candid_variant_n72(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationStatus): {
+function to_candid_variant_n103(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReservationStatus): {
     cancelled: null;
 } | {
     late: null;
@@ -2861,7 +4078,22 @@ function to_candid_variant_n72(_uploadFile: (file: ExternalBlob) => Promise<Uint
         not_arrived: null
     } : value;
 }
-function to_candid_variant_n78(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: TableStatus): {
+function to_candid_variant_n107(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ReviewRequestDelay): {
+    hour1: null;
+} | {
+    hour2: null;
+} | {
+    hour24: null;
+} {
+    return value == ReviewRequestDelay.hour1 ? {
+        hour1: null
+    } : value == ReviewRequestDelay.hour2 ? {
+        hour2: null
+    } : value == ReviewRequestDelay.hour24 ? {
+        hour24: null
+    } : value;
+}
+function to_candid_variant_n112(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: TableStatus): {
     occupied: null;
 } | {
     reserved: null;
@@ -2880,7 +4112,7 @@ function to_candid_variant_n78(_uploadFile: (file: ExternalBlob) => Promise<Uint
         unavailable: null
     } : value;
 }
-function to_candid_variant_n93(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_text_dropdown): {
+function to_candid_variant_n130(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_text_dropdown): {
     text: null;
 } | {
     dropdown: null;
@@ -2891,11 +4123,26 @@ function to_candid_variant_n93(_uploadFile: (file: ExternalBlob) => Promise<Uint
         dropdown: null
     } : value;
 }
-function to_candid_vec_n85(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<ClosingDay>): Array<_ClosingDay> {
-    return value.map((x)=>to_candid_ClosingDay_n86(_uploadFile, _downloadFile, x));
+function to_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+    admin: null;
+} | {
+    user: null;
+} | {
+    guest: null;
+} {
+    return value == UserRole.admin ? {
+        admin: null
+    } : value == UserRole.user ? {
+        user: null
+    } : value == UserRole.guest ? {
+        guest: null
+    } : value;
 }
-function to_candid_vec_n90(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<CustomQuestion>): Array<_CustomQuestion> {
-    return value.map((x)=>to_candid_CustomQuestion_n91(_uploadFile, _downloadFile, x));
+function to_candid_vec_n120(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<ClosingDay>): Array<_ClosingDay> {
+    return value.map((x)=>to_candid_ClosingDay_n121(_uploadFile, _downloadFile, x));
+}
+function to_candid_vec_n127(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<CustomQuestion>): Array<_CustomQuestion> {
+    return value.map((x)=>to_candid_CustomQuestion_n128(_uploadFile, _downloadFile, x));
 }
 export interface CreateActorOptions {
     agent?: Agent;

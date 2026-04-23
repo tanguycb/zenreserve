@@ -40,6 +40,18 @@
     --input: 0.95 0.01 70;
     --ring: 0.7 0.19 142;
 
+    /* Phase 5: Premium polish accents — defined at root for light mode */
+    --status-orange: 0.68 0.2 58;
+    --status-blue: 0.64 0.16 258;
+    --status-purple: 0.62 0.16 312;
+    --grid-subtle: 0.85 0.01 70;
+
+    /* Table status colors — light mode */
+    --color-status-free: 0.7 0.19 142;
+    --color-status-reserved: 0.73 0.18 70;
+    --color-status-occupied: 0.6 0.21 25;
+    --color-status-unavailable: 0.5 0.01 270;
+
     /* Phase 4: AI & seasonal */
     --ai-suggestion-bg: 0.96 0.04 142;
     --seasonal-active: 0.75 0.08 70;
@@ -94,11 +106,23 @@
     --input: 0.18 0.01 270;
     --ring: 0.75 0.22 142;
 
-    /* Phase 5: Premium polish accents */
+    /* Phase 5: Premium polish accents — dark mode overrides */
     --status-orange: 0.72 0.22 58;
     --status-blue: 0.7 0.19 258;
     --status-purple: 0.68 0.18 312;
     --grid-subtle: 0.22 0.01 270;
+
+    /* Table status colors — dark mode */
+    --color-status-free: 0.75 0.22 142;
+    --color-status-reserved: 0.78 0.2 70;
+    --color-status-occupied: 0.65 0.24 25;
+    --color-status-unavailable: 0.55 0.01 270;
+
+    /* Floor plan table rendering */
+    --table-border: 0.3 0.01 270;
+    --chair-foreground: 0.85 0.01 270;
+    --glow-opacity: 0.18;
+    --grid-line-floor-plan: 0.22 0.01 270;
 
     /* Phase 4: AI & seasonal on dark */
     --ai-suggestion-bg: 0.18 0.05 142;
@@ -144,6 +168,10 @@
 
   .transition-fast {
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .shadow-subtle {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .shadow-soft {
@@ -218,6 +246,47 @@
         transparent 1px
       );
     background-size: 16px 16px;
+  }
+
+  .floor-plan-grid {
+    background-image: linear-gradient(
+        0deg,
+        oklch(var(--grid-line-floor-plan) / 0.08) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        oklch(var(--grid-line-floor-plan) / 0.08) 1px,
+        transparent 1px
+      );
+    background-size: 20px 20px;
+  }
+
+  .table-glow-free {
+    @apply shadow-lg;
+    box-shadow: 0 0 16px oklch(var(--color-status-free) / var(--glow-opacity)),
+      0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .table-glow-reserved {
+    @apply shadow-lg;
+    box-shadow: 0 0 16px
+      oklch(var(--color-status-reserved) / var(--glow-opacity)), 0 4px 16px
+      rgba(0, 0, 0, 0.12);
+  }
+
+  .table-glow-occupied {
+    @apply shadow-lg;
+    box-shadow: 0 0 16px
+      oklch(var(--color-status-occupied) / var(--glow-opacity)), 0 4px 16px
+      rgba(0, 0, 0, 0.12);
+  }
+
+  .table-glow-unavailable {
+    @apply shadow-lg;
+    box-shadow: 0 0 16px
+      oklch(var(--color-status-unavailable) / var(--glow-opacity)), 0 4px 16px
+      rgba(0, 0, 0, 0.12);
   }
 
   .heading-h1 {
@@ -422,4 +491,15 @@
   --border: 0.92 0.01 70;
   --input: 0.95 0.01 70;
   --ring: 0.7 0.19 142;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

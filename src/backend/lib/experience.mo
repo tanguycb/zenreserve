@@ -19,6 +19,9 @@ module {
     description : Text,
     pricePerPerson : Nat,
     maxCapacity : Nat,
+    required : Bool,
+    serviceIds : ?[Text],
+    dayOfWeek : ?[Nat],
   ) : ExperienceTypes.Experience {
     let id = nextId(counter);
     let experience : ExperienceTypes.Experience = {
@@ -28,6 +31,9 @@ module {
       pricePerPerson;
       maxCapacity;
       isActive = true;
+      required;
+      serviceIds;
+      dayOfWeek;
     };
     experiences.add(id, experience);
     experience;
@@ -48,13 +54,26 @@ module {
   public func list(
     experiences : Map.Map<CommonTypes.ExperienceId, ExperienceTypes.Experience>,
     activeOnly : Bool,
+    serviceFilter : ?Text,
+    dayFilter : ?Nat,
   ) : [ExperienceTypes.Experience] {
-    if (activeOnly) {
-      experiences.values().filter(func(e : ExperienceTypes.Experience) : Bool {
-        e.isActive
-      }).toArray();
-    } else {
-      experiences.values().toArray();
-    };
+    experiences.values().filter(func(e : ExperienceTypes.Experience) : Bool {
+      if (activeOnly and not e.isActive) { return false };
+      // service filter: if experience has serviceIds set, caller service must be in the list
+      switch (serviceFilter, e.serviceIds) {
+        case (?svc, ?ids) {
+          if (not ids.any(func(s : Text) : Bool { s == svc })) { return false };
+        };
+        case _ {};
+      };
+      // day filter: if experience has dayOfWeek set, caller day must be in the list
+      switch (dayFilter, e.dayOfWeek) {
+        case (?day, ?days) {
+          if (not days.any(func(d : Nat) : Bool { d == day })) { return false };
+        };
+        case _ {};
+      };
+      true;
+    }).toArray();
   };
 };

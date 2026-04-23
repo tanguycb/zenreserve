@@ -10,6 +10,7 @@ import CommonTypes "../types/common";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   guests : Map.Map<CommonTypes.GuestId, GuestTypes.Guest>,
+  guestEmailIndex : Map.Map<Text, CommonTypes.GuestId>,
   guestCounter : List.List<Nat>,
 ) {
   public shared ({ caller }) func createGuest(
@@ -17,7 +18,12 @@ mixin (
     email : Text,
     phone : ?Text,
   ) : async GuestTypes.Guest {
-    GuestLib.create(guests, guestCounter, name, email, phone, Time.now());
+    // SEC-004: Only authenticated users (staff/admin) may create guest records.
+    // Prevents anonymous callers and bots from polluting the guest database.
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+    GuestLib.create(guests, guestEmailIndex, guestCounter, name, email, phone, Time.now());
   };
 
   public query ({ caller }) func getGuest(id : CommonTypes.GuestId) : async ?GuestTypes.Guest {
@@ -44,10 +50,10 @@ mixin (
     GuestLib.list(guests);
   };
 
-  public query ({ caller }) func searchGuests(searchQuery : Text) : async [GuestTypes.Guest] {
+  public query ({ caller }) func searchGuests(searchQuery : Text, limit : Nat, offset : Nat) : async { guests : [GuestTypes.Guest]; total : Nat } {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized");
     };
-    GuestLib.search(guests, searchQuery);
+    GuestLib.search(guests, searchQuery, limit, offset);
   };
 };

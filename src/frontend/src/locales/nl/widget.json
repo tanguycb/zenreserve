@@ -12,6 +12,7 @@
     "loading": "Datum laden...",
     "available": "Beschikbaar",
     "fullyBooked": "Volgeboekt",
+    "closed": "Gesloten",
     "prevMonth": "Vorige maand",
     "nextMonth": "Volgende maand",
     "weekdays": ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
@@ -41,7 +42,10 @@
     "allFullSub": "Alle tijdsloten op deze datum zijn bezet.",
     "waitlistCta": "Zet me op de wachtlijst",
     "places": "pl.",
-    "slots": "Beschikbare tijdsloten"
+    "slots": "Beschikbare tijdsloten",
+    "closed": "Gesloten",
+    "noSlots": "Geen tijdsloten beschikbaar",
+    "noSlotsSub": "Kies een andere datum of schrijf je in op de wachtlijst."
   },
   "partySizeStep": {
     "title": "Aantal personen",
@@ -57,6 +61,7 @@
   "experienceStep": {
     "title": "Voeg een ervaring toe",
     "optional": "(optioneel)",
+    "required": "Verplicht",
     "loading": "Ervaringen laden...",
     "noPreference": "Geen voorkeur",
     "noPreferenceSub": "Gewoon een heerlijke avond à la carte",
@@ -64,7 +69,8 @@
     "skip": "Geen ervaring",
     "tagMenu": "Menu",
     "tagEvent": "Evenement",
-    "tagSpecial": "Speciaal"
+    "tagSpecial": "Speciaal",
+    "noExperiences": "Geen ervaringen beschikbaar"
   },
   "detailsStep": {
     "title": "Uw gegevens",
@@ -103,6 +109,7 @@
     "successTitle": "Betaling geslaagd!",
     "successSub": "Borg van {{amount}} verwerkt.",
     "errorDefault": "Betaling mislukt. Controleer uw kaartgegevens en probeer opnieuw.",
+    "errorRateLimit": "Te veel reserveringspogingen. Probeer het over een uur opnieuw.",
     "secureNote": "256-bit SSL · Powered by Stripe · PCI-DSS compliant"
   },
   "confirmationStep": {

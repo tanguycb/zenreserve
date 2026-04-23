@@ -1,7 +1,19 @@
 import List "mo:core/List";
+import Int "mo:core/Int";
 import SettingsTypes "../types/settings";
 
 module {
+  // ── Default zone definitions seeded on first run ──────────────────────────
+  func defaultZoneDefs() : [SettingsTypes.Zone] {
+    [
+      { id = "binnen";   name = "Binnen";   color = "#3B82F6"; maxGuests = 40; boundaries = null },
+      { id = "terras";   name = "Terras";   color = "#22C55E"; maxGuests = 20; boundaries = null },
+      { id = "bar";      name = "Bar";      color = "#F59E0B"; maxGuests = 15; boundaries = null },
+      { id = "privezaal"; name = "Privézaal"; color = "#8B5CF6"; maxGuests = 20; boundaries = null },
+      { id = "rooftop";  name = "Rooftop";  color = "#EF4444"; maxGuests = 30; boundaries = null },
+    ]
+  };
+
   func defaultReservationRules() : SettingsTypes.ReservationRules {
     {
       advanceBookingDays = 90;
@@ -23,6 +35,7 @@ module {
       requireAllergies = false;
       requireDietPreferences = false;
       customQuestions = [];
+      showBabiesChildren = true;
     };
   };
 
@@ -74,6 +87,7 @@ module {
       fixedClosingDays = [];
       exceptionalClosingDays = [];
       zones = [];
+      zoneDefs = defaultZoneDefs();
       tableTypes = [];
       occupancySettings = null;
       reservationRules = defaultReservationRules();
@@ -197,5 +211,105 @@ module {
       closingHour = cfg.closingHour;
       slotIntervalMinutes = cfg.slotIntervalMinutes;
     };
+  };
+
+  // ── Zone CRUD ──────────────────────────────────────────────────────────────
+
+  /// Return all zone definitions. Seeds defaults if array is empty.
+  public func getZones(
+    configStore : List.List<SettingsTypes.RestaurantExtendedConfig>,
+  ) : [SettingsTypes.Zone] {
+    let current = configStore.at(0);
+    if (current.zoneDefs.size() == 0) {
+      let seeded = defaultZoneDefs();
+      configStore.put(0, { current with zoneDefs = seeded });
+      seeded;
+    } else {
+      current.zoneDefs;
+    };
+  };
+
+  /// Generate a simple unique-enough ID from name + timestamp suffix.
+  func makeZoneId(name : Text, now : Int) : Text {
+    let slug = name.toLower().replace(#char ' ', "-");
+    slug # "-" # (Int.abs(now) % 1_000_000).toText();
+  };
+
+  /// Add a new zone. Returns the created Zone.
+  public func addZone(
+    configStore : List.List<SettingsTypes.RestaurantExtendedConfig>,
+    name        : Text,
+    color       : Text,
+    maxGuests   : Nat,
+    now         : Int,
+  ) : SettingsTypes.Zone {
+    let current = configStore.at(0);
+    let id = makeZoneId(name, now);
+    let zone : SettingsTypes.Zone = { id; name; color; maxGuests; boundaries = null };
+    let updated = current.zoneDefs.concat([zone]);
+    configStore.put(0, { current with zoneDefs = updated });
+    zone;
+  };
+
+  /// Update an existing zone by ID. Returns the updated Zone or null if not found.
+  public func updateZone(
+    configStore : List.List<SettingsTypes.RestaurantExtendedConfig>,
+    id          : Text,
+    name        : Text,
+    color       : Text,
+    maxGuests   : Nat,
+  ) : ?SettingsTypes.Zone {
+    let current = configStore.at(0);
+    var found : ?SettingsTypes.Zone = null;
+    let updated = current.zoneDefs.map(func(z : SettingsTypes.Zone) : SettingsTypes.Zone {
+      if (z.id == id) {
+        let u : SettingsTypes.Zone = { z with name; color; maxGuests };
+        found := ?u;
+        u;
+      } else { z };
+    });
+    switch (found) {
+      case null { null };
+      case (?_) {
+        configStore.put(0, { current with zoneDefs = updated });
+        found;
+      };
+    };
+  };
+
+  /// Delete a zone by ID. Returns true if the zone was found and deleted.
+  public func deleteZone(
+    configStore : List.List<SettingsTypes.RestaurantExtendedConfig>,
+    id          : Text,
+  ) : Bool {
+    let current = configStore.at(0);
+    let before = current.zoneDefs.size();
+    let updated = current.zoneDefs.filter(func(z : SettingsTypes.Zone) : Bool { z.id != id });
+    if (updated.size() < before) {
+      configStore.put(0, { current with zoneDefs = updated });
+      true;
+    } else {
+      false;
+    };
+  };
+
+  /// Update the floor-plan visual boundaries for a zone. Returns true if zone found.
+  public func updateZoneBoundaries(
+    configStore : List.List<SettingsTypes.RestaurantExtendedConfig>,
+    id          : Text,
+    boundaries  : Text,
+  ) : Bool {
+    let current = configStore.at(0);
+    var found = false;
+    let updated = current.zoneDefs.map(func(z : SettingsTypes.Zone) : SettingsTypes.Zone {
+      if (z.id == id) {
+        found := true;
+        { z with boundaries = ?boundaries };
+      } else { z };
+    });
+    if (found) {
+      configStore.put(0, { current with zoneDefs = updated });
+    };
+    found;
   };
 };

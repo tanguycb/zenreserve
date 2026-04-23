@@ -7,12 +7,21 @@ import { PaymentStep } from "@/components/widget/PaymentStep";
 import { StepIndicator } from "@/components/widget/StepIndicator";
 import { TimeSlotStep } from "@/components/widget/TimeSlotStep";
 import { WaitlistModal } from "@/components/widget/WaitlistModal";
+import { useExperiences } from "@/hooks/useDashboard";
+import { useAvailableSlots } from "@/hooks/useReservation";
+import {
+  useGeneralInfo,
+  useGuestFormSettings,
+  useOpeningHoursConfig,
+} from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 import type { ReservationFormData } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+// Dynamic step IDs — experience step only exists when experiences are configured
 type ExtendedStepId = 1 | 2 | 3 | 4 | 5 | 6;
 
 interface WidgetPageProps {
@@ -51,33 +60,118 @@ export default function WidgetPage({
     "forward",
   );
   const [animating, setAnimating] = useState(false);
+  const queryClient = useQueryClient();
 
-  const EXTENDED_STEPS = [
-    { id: 1 as const, label: t("dateStep.title") },
-    { id: 2 as const, label: t("timeStep.title") },
-    { id: 3 as const, label: t("partySizeStep.title") },
-    { id: 4 as const, label: t("experienceStep.title") },
-    { id: 5 as const, label: t("detailsStep.title") },
-    { id: 6 as const, label: t("paymentStep.title") },
-  ];
+  // Fetch real closing days from backend
+  const { data: openingHoursConfig } = useOpeningHoursConfig();
+  // Fetch real restaurant info from backend (BUG-004 / VIS-003)
+  const { data: generalInfo } = useGeneralInfo();
+  // Fetch experiences to decide whether to show experience step
+  const { data: experiences } = useExperiences();
+  // Fetch guest form settings to know if babies/children toggle is visible
+  const { data: guestFormSettings } = useGuestFormSettings();
+
+  const restaurantName = generalInfo?.restaurantName ?? "";
+  const restaurantAddress = [
+    generalInfo?.contactPhone,
+    generalInfo?.contactEmail,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // Active experiences visible in widget, filtered by date + time/service
+  const activeExperiences = useMemo(() => {
+    const all = (experiences ?? []).filter((e) => e.available);
+    if (!selectedDate && !selectedTime) return all;
+
+    const dayOfWeek = selectedDate ? new Date(selectedDate).getDay() : -1;
+    const hour = selectedTime
+      ? Number.parseInt(selectedTime.split(":")[0] ?? "0", 10)
+      : -1;
+    const serviceId = hour >= 0 ? (hour < 17 ? "lunch" : "diner") : "";
+
+    return all.filter((exp) => {
+      if (exp.serviceIds && exp.serviceIds.length > 0 && serviceId) {
+        if (!exp.serviceIds.includes(serviceId)) return false;
+      }
+      if (exp.dayOfWeek && exp.dayOfWeek.length > 0 && dayOfWeek >= 0) {
+        if (!exp.dayOfWeek.includes(dayOfWeek)) return false;
+      }
+      return true;
+    });
+  }, [experiences, selectedDate, selectedTime]);
+  const hasExperiences = activeExperiences.length > 0;
+  // If any experience is required, guest must pick one (no skip)
+  const hasRequiredExperience = activeExperiences.some((e) => e.required);
+
+  // Build dynamic step list: steps 1-3 always present, step 4 (experience) only if needed
+  const STEPS = useMemo(() => {
+    const base: Array<{ id: ExtendedStepId; label: string }> = [
+      { id: 1, label: t("partySizeStep.title") },
+      { id: 2, label: t("dateStep.title") },
+      { id: 3, label: t("timeStep.title") },
+    ];
+    if (hasExperiences) {
+      base.push({ id: 4, label: t("experienceStep.title") });
+    }
+    base.push(
+      { id: 5, label: t("detailsStep.title") },
+      { id: 6, label: t("paymentStep.title") },
+    );
+    return base;
+  }, [hasExperiences, t]);
+
+  // Map real step position (1..N) for progress indicator
+  // step IDs: 1=partySize, 2=date, 3=time, 4=experience(conditional), 5=details, 6=payment
+  const progressStep = useMemo(() => {
+    if (!hasExperiences && step >= 5) return step - 1; // shift down when no exp step
+    return step;
+  }, [hasExperiences, step]);
+
+  // BUG 2 fix: fetch real available slots when date and partySize are set
+  const { data: availableSlots, isFetching: slotsFetching } = useAvailableSlots(
+    selectedDate,
+    partySize,
+  );
+
+  // Navigate to next step, skipping step 4 if no experiences
+  function getNextStep(current: ExtendedStepId): ExtendedStepId {
+    if (current === 3 && !hasExperiences) return 5;
+    if (current < 6) return (current + 1) as ExtendedStepId;
+    return current;
+  }
+
+  function getPrevStep(current: ExtendedStepId): ExtendedStepId {
+    if (current === 5 && !hasExperiences) return 3;
+    if (current > 1) return (current - 1) as ExtendedStepId;
+    return current;
+  }
 
   function goNext() {
-    if (step < 6) {
+    const next = getNextStep(step);
+    if (next !== step) {
       setSlideDirection("forward");
       setAnimating(true);
       setTimeout(() => {
-        setStep((s) => (s + 1) as ExtendedStepId);
+        setStep(next);
         setAnimating(false);
       }, 120);
     }
   }
 
   function goBack() {
-    if (step > 1) {
+    const prev = getPrevStep(step);
+    if (prev !== step) {
       setSlideDirection("back");
       setAnimating(true);
       setTimeout(() => {
-        setStep((s) => (s - 1) as ExtendedStepId);
+        // When going back to step 3 (time slots), invalidate slots
+        if (prev === 3) {
+          queryClient.invalidateQueries({
+            queryKey: ["availableSlots", selectedDate, partySize],
+          });
+        }
+        setStep(prev);
         setAnimating(false);
       }, 120);
     }
@@ -93,9 +187,15 @@ export default function WidgetPage({
     setConfirmed(false);
   }
 
+  // Step 4 (experience): if required, guest must pick one; if all optional, can skip
+  const experienceValid =
+    step !== 4 || !hasRequiredExperience || selectedExperience !== "";
+
   const isNextDisabled =
-    (step === 1 && !selectedDate) ||
-    (step === 2 && !selectedTime) ||
+    (step === 1 && partySize < 1) ||
+    (step === 2 && !selectedDate) ||
+    (step === 3 && !selectedTime) ||
+    (step === 4 && !experienceValid) ||
     (step === 5 &&
       (!form.firstName?.trim() ||
         !form.lastName?.trim() ||
@@ -105,27 +205,18 @@ export default function WidgetPage({
 
   if (confirmed) {
     return (
-      <div
-        className="rounded-2xl shadow-elevated overflow-hidden"
-        style={{ backgroundColor: "#FFFFFF" }}
-      >
-        <div className="px-6 pt-6 pb-4" style={{ backgroundColor: "#FAF7F0" }}>
+      <div className="rounded-2xl shadow-elevated overflow-hidden bg-card">
+        <div className="px-6 pt-6 pb-4 bg-muted/40">
           <div className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#22C55E1A" }}
-            >
-              <ChefHat className="h-5 w-5" style={{ color: "#22C55E" }} />
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10">
+              <ChefHat className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2
-                className="font-semibold text-lg"
-                style={{ color: "#1F2937" }}
-              >
-                Restaurant ZenReserve
+              <h2 className="font-semibold text-lg text-foreground">
+                {restaurantName || t("nav.bookTable")}
               </h2>
-              <p className="text-xs" style={{ color: "#6B7280" }}>
-                Antwerpen · Grote Markt 1
+              <p className="text-xs text-muted-foreground">
+                {generalInfo?.contactPhone ?? ""}
               </p>
             </div>
           </div>
@@ -137,6 +228,8 @@ export default function WidgetPage({
             partySize={partySize}
             form={form}
             experienceId={selectedExperience}
+            restaurantName={restaurantName}
+            restaurantAddress={restaurantAddress}
             onReset={handleReset}
           />
         </div>
@@ -146,33 +239,24 @@ export default function WidgetPage({
 
   return (
     <>
-      <div
-        className="rounded-2xl shadow-elevated overflow-hidden"
-        style={{ backgroundColor: "#FFFFFF" }}
-      >
+      <div className="rounded-2xl shadow-elevated overflow-hidden bg-card">
         {/* Restaurant header */}
-        <div className="px-6 pt-5 pb-4" style={{ backgroundColor: "#FAF7F0" }}>
+        <div className="px-6 pt-5 pb-4 bg-muted/40">
           <div className="flex items-center gap-3 mb-4">
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "#22C55E1A" }}
-            >
-              <ChefHat className="h-5 w-5" style={{ color: "#22C55E" }} />
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10">
+              <ChefHat className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <h1
-                className="font-bold text-base leading-tight"
-                style={{ color: "#1F2937" }}
-              >
+              <h1 className="font-bold text-base leading-tight text-foreground">
                 {t("nav.bookTable")}
               </h1>
-              <p className="text-xs truncate" style={{ color: "#6B7280" }}>
-                Restaurant ZenReserve · Antwerpen
+              <p className="text-xs truncate text-muted-foreground">
+                {restaurantName}
               </p>
             </div>
           </div>
 
-          <StepIndicator steps={EXTENDED_STEPS} currentStep={step} />
+          <StepIndicator steps={STEPS} currentStep={progressStep} />
         </div>
 
         {/* Step content */}
@@ -187,30 +271,64 @@ export default function WidgetPage({
           )}
         >
           {step === 1 && (
+            <PartySizeStep
+              partySize={partySize}
+              onSelect={setPartySize}
+              showBabiesChildren={guestFormSettings?.showBabiesChildren ?? true}
+            />
+          )}
+          {step === 2 && (
             <DatePickerStep
               selectedDate={selectedDate}
+              fixedClosingDays={openingHoursConfig?.fixedClosingDays ?? []}
+              exceptionalClosingDays={
+                openingHoursConfig?.exceptionalClosingDays?.map(
+                  (d) => d.date,
+                ) ?? []
+              }
               onSelect={(date) => {
                 setSelectedDate(date);
                 setSelectedTime("");
               }}
             />
           )}
-          {step === 2 && (
+          {step === 3 && (
             <TimeSlotStep
               selectedDate={selectedDate}
               selectedTime={selectedTime}
               partySize={partySize}
               onSelect={setSelectedTime}
               onWaitlist={() => setShowWaitlist(true)}
+              availableSlots={availableSlots}
+              isLoading={slotsFetching}
+              services={openingHoursConfig?.services}
             />
           )}
-          {step === 3 && (
-            <PartySizeStep partySize={partySize} onSelect={setPartySize} />
-          )}
-          {step === 4 && (
+          {step === 4 && hasExperiences && (
             <ExperienceStep
               selectedExperienceId={selectedExperience}
               onSelect={setSelectedExperience}
+              experiences={activeExperiences.map((e) => {
+                const parts: string[] = [];
+                if (e.serviceIds && e.serviceIds.length > 0) {
+                  parts.push(
+                    e.serviceIds
+                      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                      .join(", "),
+                  );
+                }
+                return {
+                  id: e.id,
+                  name: e.name,
+                  description: e.description,
+                  price: e.price,
+                  available: e.available,
+                  required: e.required,
+                  restrictionNote:
+                    parts.length > 0 ? parts.join(" · ") : undefined,
+                };
+              })}
+              hasRequired={hasRequiredExperience}
             />
           )}
           {step === 5 && (
@@ -222,6 +340,20 @@ export default function WidgetPage({
           {step === 6 && (
             <PaymentStep
               partySize={partySize}
+              selectedDate={selectedDate}
+              selectedTime={selectedTime}
+              experienceId={selectedExperience || undefined}
+              guestDetails={
+                form.firstName
+                  ? {
+                      firstName: form.firstName,
+                      lastName: form.lastName,
+                      email: form.email ?? "",
+                      phone: form.phone,
+                    }
+                  : undefined
+              }
+              specialRequests={form.notes || undefined}
               onPaymentSuccess={() => setConfirmed(true)}
             />
           )}
@@ -229,16 +361,12 @@ export default function WidgetPage({
 
         {/* Navigation footer */}
         {step !== 6 && (
-          <div
-            className="flex gap-3 px-6 py-4"
-            style={{ borderTop: "1px solid #F3F4F6" }}
-          >
+          <div className="flex gap-3 px-6 py-4 border-t border-border">
             {step > 1 ? (
               <button
                 type="button"
                 onClick={goBack}
-                className="flex items-center gap-1 px-4 py-3 rounded-xl border font-medium text-sm transition-all hover:bg-black/5 active:scale-[0.97]"
-                style={{ borderColor: "#E2E8F0", color: "#6B7280" }}
+                className="flex items-center gap-1 px-4 py-3 rounded-xl border border-border font-medium text-sm transition-all hover:bg-muted active:scale-[0.97] text-muted-foreground"
                 data-ocid="widget-back-btn"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -252,12 +380,11 @@ export default function WidgetPage({
               onClick={goNext}
               disabled={isNextDisabled}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-bold text-sm transition-all",
+                "flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-bold text-sm transition-all bg-primary text-primary-foreground",
                 !isNextDisabled
                   ? "hover:opacity-90 active:scale-[0.98]"
                   : "opacity-40 cursor-not-allowed",
               )}
-              style={{ backgroundColor: "#22C55E", color: "#FFFFFF" }}
               data-ocid="widget-next-btn"
             >
               {nextLabel}
@@ -267,26 +394,25 @@ export default function WidgetPage({
         )}
 
         {/* Book Summary bar (steps 2+) */}
-        {step >= 2 && selectedDate && (
+        {step >= 2 && (
           <div
-            className="px-6 py-2.5 flex items-center gap-3 flex-wrap"
-            style={{
-              backgroundColor: "#F9FAFB",
-              borderTop: step === 6 ? "1px solid #F3F4F6" : undefined,
-            }}
+            className={cn(
+              "px-6 py-2.5 flex items-center gap-3 flex-wrap bg-muted/30",
+              step === 6 && "border-t border-border",
+            )}
           >
             <SummaryPill
-              label={new Date(selectedDate).toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "short",
-              })}
+              label={`${partySize} ${partySize === 1 ? t("partySizeStep.person") : t("partySizeStep.persons")}`}
             />
-            {selectedTime && <SummaryPill label={selectedTime} />}
-            {step >= 3 && (
+            {selectedDate && (
               <SummaryPill
-                label={`${partySize} ${partySize === 1 ? t("partySizeStep.person") : t("partySizeStep.persons")}`}
+                label={new Date(selectedDate).toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                })}
               />
             )}
+            {selectedTime && <SummaryPill label={selectedTime} />}
           </div>
         )}
       </div>
@@ -302,10 +428,7 @@ export default function WidgetPage({
 
 function SummaryPill({ label }: { label: string }) {
   return (
-    <span
-      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-      style={{ backgroundColor: "#22C55E1A", color: "#22C55E" }}
-    >
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
       {label}
     </span>
   );

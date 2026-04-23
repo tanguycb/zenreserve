@@ -20,6 +20,7 @@ export const GuestId = IDL.Text;
 export const WaitlistId = IDL.Text;
 export const WaitlistStatus = IDL.Variant({
   'expired' : IDL.Null,
+  'removed_by_staff' : IDL.Null,
   'confirmed' : IDL.Null,
   'offered' : IDL.Null,
   'waiting' : IDL.Null,
@@ -35,6 +36,13 @@ export const WaitlistEntry = IDL.Record({
   'requestedTime' : IDL.Opt(IDL.Text),
   'partySize' : IDL.Nat,
   'guestId' : GuestId,
+});
+export const Zone = IDL.Record({
+  'id' : IDL.Text,
+  'boundaries' : IDL.Opt(IDL.Text),
+  'name' : IDL.Text,
+  'color' : IDL.Text,
+  'maxGuests' : IDL.Nat,
 });
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
@@ -62,6 +70,7 @@ export const Table = IDL.Record({
   'id' : TableId,
   'status' : TableStatus,
   'name' : IDL.Text,
+  'zone' : IDL.Opt(IDL.Text),
   'seatCount' : IDL.Opt(IDL.Nat),
   'guestName' : IDL.Opt(IDL.Text),
   'groupId' : IDL.Opt(IDL.Text),
@@ -72,10 +81,13 @@ export const ExperienceId = IDL.Text;
 export const Experience = IDL.Record({
   'id' : ExperienceId,
   'maxCapacity' : IDL.Nat,
+  'dayOfWeek' : IDL.Opt(IDL.Vec(IDL.Nat)),
   'name' : IDL.Text,
   'pricePerPerson' : IDL.Nat,
   'description' : IDL.Text,
   'isActive' : IDL.Bool,
+  'serviceIds' : IDL.Opt(IDL.Vec(IDL.Text)),
+  'required' : IDL.Bool,
 });
 export const Guest = IDL.Record({
   'id' : GuestId,
@@ -95,6 +107,16 @@ export const ReservationStatus = IDL.Variant({
   'confirmed' : IDL.Null,
   'not_arrived' : IDL.Null,
 });
+export const ReservationChange = IDL.Record({
+  'id' : IDL.Text,
+  'field' : IDL.Text,
+  'changedByName' : IDL.Text,
+  'changedByRole' : IDL.Text,
+  'oldValue' : IDL.Text,
+  'changedBy' : IDL.Text,
+  'newValue' : IDL.Text,
+  'timestamp' : IDL.Int,
+});
 export const Reservation = IDL.Record({
   'id' : ReservationId,
   'status' : ReservationStatus,
@@ -103,9 +125,21 @@ export const Reservation = IDL.Record({
   'specialRequests' : IDL.Opt(IDL.Text),
   'createdAt' : Timestamp,
   'time' : IDL.Text,
+  'zone' : IDL.Opt(IDL.Text),
+  'tableId' : IDL.Opt(IDL.Text),
+  'updatedAt' : Timestamp,
+  'notes' : IDL.Opt(IDL.Text),
   'stripePaymentIntentId' : IDL.Opt(IDL.Text),
   'partySize' : IDL.Nat,
+  'changes' : IDL.Vec(ReservationChange),
   'guestId' : GuestId,
+});
+export const TableGroupDefinition = IDL.Record({
+  'id' : IDL.Text,
+  'name' : IDL.Text,
+  'tableIds' : IDL.Vec(IDL.Text),
+  'description' : IDL.Text,
+  'totalCapacity' : IDL.Nat,
 });
 export const SeasonalPeriod = IDL.Record({
   'id' : IDL.Text,
@@ -117,6 +151,18 @@ export const SeasonalPeriod = IDL.Record({
   'isActive' : IDL.Bool,
   'dateFrom' : IDL.Text,
 });
+export const AuditLogEntry = IDL.Record({
+  'id' : IDL.Text,
+  'action' : IDL.Text,
+  'oldValue' : IDL.Opt(IDL.Text),
+  'callerName' : IDL.Text,
+  'callerRole' : IDL.Text,
+  'page' : IDL.Text,
+  'newValue' : IDL.Opt(IDL.Text),
+  'summary' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'callerPrincipal' : IDL.Text,
+});
 export const TimeSlotStatus = IDL.Variant({
   'full' : IDL.Null,
   'available' : IDL.Null,
@@ -127,6 +173,22 @@ export const TimeSlot = IDL.Record({
   'time' : IDL.Text,
   'totalSeats' : IDL.Nat,
   'availableSeats' : IDL.Nat,
+});
+export const AvailableSlotsResponse = IDL.Record({
+  'fixedClosingDays' : IDL.Vec(IDL.Nat),
+  'slots' : IDL.Vec(TimeSlot),
+});
+export const EmailTemplateType = IDL.Text;
+export const EmailTemplate = IDL.Record({
+  'id' : IDL.Text,
+  'backgroundColor' : IDL.Text,
+  'subject' : IDL.Text,
+  'heading' : IDL.Text,
+  'templateType' : EmailTemplateType,
+  'accentColor' : IDL.Text,
+  'logoUrl' : IDL.Text,
+  'bodyHtml' : IDL.Text,
+  'footer' : IDL.Text,
 });
 export const IntegrationSettings = IDL.Record({
   'mollieEnabled' : IDL.Bool,
@@ -154,6 +216,7 @@ export const GuestFormSettings = IDL.Record({
   'requireAllergies' : IDL.Bool,
   'requireDietPreferences' : IDL.Bool,
   'requirePhone' : IDL.Bool,
+  'showBabiesChildren' : IDL.Bool,
   'customQuestions' : IDL.Vec(CustomQuestion),
 });
 export const DayOfWeek = IDL.Nat;
@@ -215,6 +278,7 @@ export const RestaurantExtendedConfig = IDL.Record({
   'zones' : IDL.Vec(ZoneCapacity),
   'tableTypes' : IDL.Vec(TableType),
   'reservationRules' : ReservationRules,
+  'zoneDefs' : IDL.Vec(Zone),
   'currency' : IDL.Text,
   'restaurantName' : IDL.Text,
   'closingHour' : IDL.Nat,
@@ -235,8 +299,19 @@ export const KPIs = IDL.Record({
   'avgPartySize' : IDL.Nat,
   'occupancyPct' : IDL.Nat,
   'todayCoversPerService' : IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)),
+  'waitlistCount' : IDL.Nat,
   'todayReservationCount' : IDL.Nat,
   'noShowCount' : IDL.Nat,
+});
+export const ReviewRequestDelay = IDL.Variant({
+  'hour1' : IDL.Null,
+  'hour2' : IDL.Null,
+  'hour24' : IDL.Null,
+});
+export const ReviewRequestSettings = IDL.Record({
+  'enabled' : IDL.Bool,
+  'message' : IDL.Text,
+  'delay' : ReviewRequestDelay,
 });
 export const SuggestionAccuracyStats = IDL.Record({
   'periodDays' : IDL.Nat,
@@ -248,6 +323,7 @@ export const SuggestionAccuracyStats = IDL.Record({
 export const ReservationFilter = IDL.Record({
   'status' : IDL.Opt(ReservationStatus),
   'date' : IDL.Opt(IDL.Text),
+  'time' : IDL.Opt(IDL.Text),
   'guestId' : IDL.Opt(GuestId),
 });
 export const ReservationSummary = IDL.Record({
@@ -276,7 +352,17 @@ export const idlService = IDL.Service({
     ),
   'addToWaitlist' : IDL.Func(
       [GuestId, IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
-      [WaitlistEntry],
+      [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
+      [],
+    ),
+  'addZone' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : Zone, 'err' : IDL.Text })],
+      [],
+    ),
+  'applyHouseStyleToAll' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
   'askAI' : IDL.Func(
@@ -296,13 +382,21 @@ export const idlService = IDL.Service({
       [],
     ),
   'autoAssignTable' : IDL.Func(
-      [ReservationId, IDL.Nat],
+      [ReservationId, IDL.Nat, IDL.Text, IDL.Text],
       [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
       [],
     ),
   'cancelReservation' : IDL.Func([ReservationId], [], []),
   'createExperience' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Nat, IDL.Nat],
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Nat,
+        IDL.Bool,
+        IDL.Opt(IDL.Vec(IDL.Text)),
+        IDL.Opt(IDL.Vec(IDL.Nat)),
+      ],
       [Experience],
       [],
     ),
@@ -334,13 +428,19 @@ export const idlService = IDL.Service({
         IDL.Text,
         IDL.Opt(IDL.Text),
         IDL.Opt(IDL.Text),
+        IDL.Opt(ExperienceId),
       ],
       [IDL.Variant({ 'ok' : Reservation, 'err' : IDL.Text })],
       [],
     ),
   'createTable' : IDL.Func(
-      [IDL.Text, IDL.Nat, IDL.Int, IDL.Int],
+      [IDL.Text, IDL.Nat, IDL.Int, IDL.Int, IDL.Opt(IDL.Text)],
       [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+      [],
+    ),
+  'createTableGroupDefinition' : IDL.Func(
+      [IDL.Text, IDL.Vec(IDL.Text), IDL.Text],
+      [IDL.Variant({ 'ok' : TableGroupDefinition, 'err' : IDL.Text })],
       [],
     ),
   'deleteSeasonalPeriod' : IDL.Func(
@@ -353,13 +453,23 @@ export const idlService = IDL.Service({
       [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
+  'deleteTableGroupDefinition' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'deleteZone' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
   'findBestTable' : IDL.Func(
-      [IDL.Nat, IDL.Vec(IDL.Text)],
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Vec(IDL.Text)],
       [IDL.Opt(Table)],
       ['query'],
     ),
   'findBestTableForReservation' : IDL.Func(
-      [IDL.Nat],
+      [IDL.Nat, IDL.Text, IDL.Text],
       [IDL.Opt(Table)],
       ['query'],
     ),
@@ -378,15 +488,47 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Text)],
       ['query'],
     ),
-  'getAvailableSlots' : IDL.Func([IDL.Text], [IDL.Vec(TimeSlot)], ['query']),
+  'getAuditLog' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Vec(AuditLogEntry), 'err' : IDL.Text })],
+      ['query'],
+    ),
+  'getAuditLogPaginated' : IDL.Func(
+      [IDL.Nat, IDL.Nat],
+      [
+        IDL.Variant({
+          'ok' : IDL.Record({
+            'total' : IDL.Nat,
+            'entries' : IDL.Vec(AuditLogEntry),
+          }),
+          'err' : IDL.Text,
+        }),
+      ],
+      ['query'],
+    ),
+  'getAvailableSlots' : IDL.Func(
+      [IDL.Text],
+      [AvailableSlotsResponse],
+      ['query'],
+    ),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getExtendedConfig' : IDL.Func([], [RestaurantExtendedConfig], ['query']),
+  'getEmailTemplates' : IDL.Func([], [IDL.Vec(EmailTemplate)], ['query']),
+  'getExtendedConfig' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : RestaurantExtendedConfig, 'err' : IDL.Text })],
+      ['query'],
+    ),
   'getFloorState' : IDL.Func([], [FloorState], ['query']),
   'getGuest' : IDL.Func([GuestId], [IDL.Opt(Guest)], ['query']),
   'getKPIs' : IDL.Func([], [KPIs], ['query']),
   'getReservation' : IDL.Func(
       [ReservationId],
       [IDL.Opt(Reservation)],
+      ['query'],
+    ),
+  'getReservationChanges' : IDL.Func(
+      [ReservationId],
+      [IDL.Variant({ 'ok' : IDL.Vec(ReservationChange), 'err' : IDL.Text })],
       ['query'],
     ),
   'getRestaurantConfig' : IDL.Func(
@@ -402,10 +544,16 @@ export const idlService = IDL.Service({
       ],
       ['query'],
     ),
+  'getReviewRequestSettings' : IDL.Func([], [ReviewRequestSettings], ['query']),
   'getSeasonalPeriods' : IDL.Func([], [IDL.Vec(SeasonalPeriod)], ['query']),
   'getSuggestionAccuracyStats' : IDL.Func(
       [IDL.Nat],
       [SuggestionAccuracyStats],
+      ['query'],
+    ),
+  'getTableGroupDefinitions' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Vec(TableGroupDefinition), 'err' : IDL.Text })],
       ['query'],
     ),
   'getTables' : IDL.Func([], [IDL.Vec(Table)], ['query']),
@@ -415,6 +563,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(WaitlistEntry)],
       ['query'],
     ),
+  'getZones' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Vec(Zone), 'err' : IDL.Text })],
+      ['query'],
+    ),
   'groupTables' : IDL.Func(
       [IDL.Vec(IDL.Text), IDL.Text],
       [IDL.Variant({ 'ok' : IDL.Vec(Table), 'err' : IDL.Text })],
@@ -422,16 +575,37 @@ export const idlService = IDL.Service({
     ),
   'hasOwner' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'listActiveExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
+  'listActiveExperiences' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Opt(IDL.Nat)],
+      [IDL.Vec(Experience)],
+      ['query'],
+    ),
   'listExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
   'listGuests' : IDL.Func([], [IDL.Vec(Guest)], ['query']),
   'listReservations' : IDL.Func(
       [ReservationFilter],
-      [IDL.Vec(Reservation)],
+      [IDL.Variant({ 'ok' : IDL.Vec(Reservation), 'err' : IDL.Text })],
       ['query'],
     ),
   'listTeamMembers' : IDL.Func([], [IDL.Vec(TeamMember)], ['query']),
+  'logAuditEntry' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Opt(IDL.Text),
+        IDL.Opt(IDL.Text),
+      ],
+      [],
+      ['oneway'],
+    ),
   'offerWaitlistSpot' : IDL.Func([WaitlistId], [], []),
+  'recordReviewRequestSent' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
   'recordSuggestionFeedback' : IDL.Func(
       [IDL.Text, IDL.Bool, IDL.Opt(IDL.Text)],
       [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
@@ -452,18 +626,43 @@ export const idlService = IDL.Service({
       [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
       [],
     ),
+  'resetEmailTemplate' : IDL.Func(
+      [EmailTemplateType],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'saveEmailTemplate' : IDL.Func(
+      [EmailTemplate],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'saveEmailTemplates' : IDL.Func(
+      [IDL.Vec(EmailTemplate)],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'saveReviewRequestSettings' : IDL.Func(
+      [IDL.Bool, ReviewRequestDelay, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
   'saveSeasonalPeriod' : IDL.Func(
       [SeasonalPeriod],
       [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
-  'searchGuests' : IDL.Func([IDL.Text], [IDL.Vec(Guest)], ['query']),
+  'searchGuests' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Nat],
+      [IDL.Record({ 'total' : IDL.Nat, 'guests' : IDL.Vec(Guest) })],
+      ['query'],
+    ),
   'setOwner' : IDL.Func([IDL.Principal], [], []),
   'setTableStatus' : IDL.Func(
       [TableId, TableStatus],
       [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
       [],
     ),
+  'shouldSendReviewRequest' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'suggestTable' : IDL.Func(
       [
         IDL.Nat,
@@ -473,6 +672,11 @@ export const idlService = IDL.Service({
         IDL.Vec(ReservationSummary),
       ],
       [IDL.Variant({ 'ok' : AISeatingSuggestion, 'err' : IDL.Text })],
+      [],
+    ),
+  'syncTablesFromSettings' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Nat, 'err' : IDL.Text })],
       [],
     ),
   'toggleSeasonalPeriod' : IDL.Func(
@@ -533,7 +737,17 @@ export const idlService = IDL.Service({
       [],
     ),
   'updateReservation' : IDL.Func(
-      [ReservationId, IDL.Text, IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
+      [
+        ReservationId,
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Opt(IDL.Text),
+        IDL.Opt(ReservationStatus),
+        IDL.Opt(ExperienceId),
+        IDL.Opt(IDL.Text),
+        IDL.Opt(IDL.Text),
+      ],
       [IDL.Variant({ 'ok' : Reservation, 'err' : IDL.Text })],
       [],
     ),
@@ -557,8 +771,23 @@ export const idlService = IDL.Service({
       [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
+  'updateTableCapacity' : IDL.Func(
+      [TableId, IDL.Nat],
+      [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateTableGroupDefinition' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Vec(IDL.Text), IDL.Text],
+      [IDL.Variant({ 'ok' : TableGroupDefinition, 'err' : IDL.Text })],
+      [],
+    ),
   'updateTablePosition' : IDL.Func(
       [TableId, IDL.Int, IDL.Int],
+      [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateTableZone' : IDL.Func(
+      [TableId, IDL.Opt(IDL.Text)],
       [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
       [],
     ),
@@ -570,6 +799,16 @@ export const idlService = IDL.Service({
   'updateWaitlistEntry' : IDL.Func(
       [WaitlistId, IDL.Nat, IDL.Opt(IDL.Text)],
       [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateZone' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : Zone, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateZoneBoundaries' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
       [],
     ),
 });
@@ -589,6 +828,7 @@ export const idlFactory = ({ IDL }) => {
   const WaitlistId = IDL.Text;
   const WaitlistStatus = IDL.Variant({
     'expired' : IDL.Null,
+    'removed_by_staff' : IDL.Null,
     'confirmed' : IDL.Null,
     'offered' : IDL.Null,
     'waiting' : IDL.Null,
@@ -604,6 +844,13 @@ export const idlFactory = ({ IDL }) => {
     'requestedTime' : IDL.Opt(IDL.Text),
     'partySize' : IDL.Nat,
     'guestId' : GuestId,
+  });
+  const Zone = IDL.Record({
+    'id' : IDL.Text,
+    'boundaries' : IDL.Opt(IDL.Text),
+    'name' : IDL.Text,
+    'color' : IDL.Text,
+    'maxGuests' : IDL.Nat,
   });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
@@ -631,6 +878,7 @@ export const idlFactory = ({ IDL }) => {
     'id' : TableId,
     'status' : TableStatus,
     'name' : IDL.Text,
+    'zone' : IDL.Opt(IDL.Text),
     'seatCount' : IDL.Opt(IDL.Nat),
     'guestName' : IDL.Opt(IDL.Text),
     'groupId' : IDL.Opt(IDL.Text),
@@ -641,10 +889,13 @@ export const idlFactory = ({ IDL }) => {
   const Experience = IDL.Record({
     'id' : ExperienceId,
     'maxCapacity' : IDL.Nat,
+    'dayOfWeek' : IDL.Opt(IDL.Vec(IDL.Nat)),
     'name' : IDL.Text,
     'pricePerPerson' : IDL.Nat,
     'description' : IDL.Text,
     'isActive' : IDL.Bool,
+    'serviceIds' : IDL.Opt(IDL.Vec(IDL.Text)),
+    'required' : IDL.Bool,
   });
   const Guest = IDL.Record({
     'id' : GuestId,
@@ -664,6 +915,16 @@ export const idlFactory = ({ IDL }) => {
     'confirmed' : IDL.Null,
     'not_arrived' : IDL.Null,
   });
+  const ReservationChange = IDL.Record({
+    'id' : IDL.Text,
+    'field' : IDL.Text,
+    'changedByName' : IDL.Text,
+    'changedByRole' : IDL.Text,
+    'oldValue' : IDL.Text,
+    'changedBy' : IDL.Text,
+    'newValue' : IDL.Text,
+    'timestamp' : IDL.Int,
+  });
   const Reservation = IDL.Record({
     'id' : ReservationId,
     'status' : ReservationStatus,
@@ -672,9 +933,21 @@ export const idlFactory = ({ IDL }) => {
     'specialRequests' : IDL.Opt(IDL.Text),
     'createdAt' : Timestamp,
     'time' : IDL.Text,
+    'zone' : IDL.Opt(IDL.Text),
+    'tableId' : IDL.Opt(IDL.Text),
+    'updatedAt' : Timestamp,
+    'notes' : IDL.Opt(IDL.Text),
     'stripePaymentIntentId' : IDL.Opt(IDL.Text),
     'partySize' : IDL.Nat,
+    'changes' : IDL.Vec(ReservationChange),
     'guestId' : GuestId,
+  });
+  const TableGroupDefinition = IDL.Record({
+    'id' : IDL.Text,
+    'name' : IDL.Text,
+    'tableIds' : IDL.Vec(IDL.Text),
+    'description' : IDL.Text,
+    'totalCapacity' : IDL.Nat,
   });
   const SeasonalPeriod = IDL.Record({
     'id' : IDL.Text,
@@ -686,6 +959,18 @@ export const idlFactory = ({ IDL }) => {
     'isActive' : IDL.Bool,
     'dateFrom' : IDL.Text,
   });
+  const AuditLogEntry = IDL.Record({
+    'id' : IDL.Text,
+    'action' : IDL.Text,
+    'oldValue' : IDL.Opt(IDL.Text),
+    'callerName' : IDL.Text,
+    'callerRole' : IDL.Text,
+    'page' : IDL.Text,
+    'newValue' : IDL.Opt(IDL.Text),
+    'summary' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'callerPrincipal' : IDL.Text,
+  });
   const TimeSlotStatus = IDL.Variant({
     'full' : IDL.Null,
     'available' : IDL.Null,
@@ -696,6 +981,22 @@ export const idlFactory = ({ IDL }) => {
     'time' : IDL.Text,
     'totalSeats' : IDL.Nat,
     'availableSeats' : IDL.Nat,
+  });
+  const AvailableSlotsResponse = IDL.Record({
+    'fixedClosingDays' : IDL.Vec(IDL.Nat),
+    'slots' : IDL.Vec(TimeSlot),
+  });
+  const EmailTemplateType = IDL.Text;
+  const EmailTemplate = IDL.Record({
+    'id' : IDL.Text,
+    'backgroundColor' : IDL.Text,
+    'subject' : IDL.Text,
+    'heading' : IDL.Text,
+    'templateType' : EmailTemplateType,
+    'accentColor' : IDL.Text,
+    'logoUrl' : IDL.Text,
+    'bodyHtml' : IDL.Text,
+    'footer' : IDL.Text,
   });
   const IntegrationSettings = IDL.Record({
     'mollieEnabled' : IDL.Bool,
@@ -723,6 +1024,7 @@ export const idlFactory = ({ IDL }) => {
     'requireAllergies' : IDL.Bool,
     'requireDietPreferences' : IDL.Bool,
     'requirePhone' : IDL.Bool,
+    'showBabiesChildren' : IDL.Bool,
     'customQuestions' : IDL.Vec(CustomQuestion),
   });
   const DayOfWeek = IDL.Nat;
@@ -784,6 +1086,7 @@ export const idlFactory = ({ IDL }) => {
     'zones' : IDL.Vec(ZoneCapacity),
     'tableTypes' : IDL.Vec(TableType),
     'reservationRules' : ReservationRules,
+    'zoneDefs' : IDL.Vec(Zone),
     'currency' : IDL.Text,
     'restaurantName' : IDL.Text,
     'closingHour' : IDL.Nat,
@@ -804,8 +1107,19 @@ export const idlFactory = ({ IDL }) => {
     'avgPartySize' : IDL.Nat,
     'occupancyPct' : IDL.Nat,
     'todayCoversPerService' : IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)),
+    'waitlistCount' : IDL.Nat,
     'todayReservationCount' : IDL.Nat,
     'noShowCount' : IDL.Nat,
+  });
+  const ReviewRequestDelay = IDL.Variant({
+    'hour1' : IDL.Null,
+    'hour2' : IDL.Null,
+    'hour24' : IDL.Null,
+  });
+  const ReviewRequestSettings = IDL.Record({
+    'enabled' : IDL.Bool,
+    'message' : IDL.Text,
+    'delay' : ReviewRequestDelay,
   });
   const SuggestionAccuracyStats = IDL.Record({
     'periodDays' : IDL.Nat,
@@ -817,6 +1131,7 @@ export const idlFactory = ({ IDL }) => {
   const ReservationFilter = IDL.Record({
     'status' : IDL.Opt(ReservationStatus),
     'date' : IDL.Opt(IDL.Text),
+    'time' : IDL.Opt(IDL.Text),
     'guestId' : IDL.Opt(GuestId),
   });
   const ReservationSummary = IDL.Record({
@@ -845,7 +1160,17 @@ export const idlFactory = ({ IDL }) => {
       ),
     'addToWaitlist' : IDL.Func(
         [GuestId, IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
-        [WaitlistEntry],
+        [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
+        [],
+      ),
+    'addZone' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : Zone, 'err' : IDL.Text })],
+        [],
+      ),
+    'applyHouseStyleToAll' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
     'askAI' : IDL.Func(
@@ -865,13 +1190,21 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'autoAssignTable' : IDL.Func(
-        [ReservationId, IDL.Nat],
+        [ReservationId, IDL.Nat, IDL.Text, IDL.Text],
         [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
         [],
       ),
     'cancelReservation' : IDL.Func([ReservationId], [], []),
     'createExperience' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Nat, IDL.Nat],
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Nat,
+          IDL.Bool,
+          IDL.Opt(IDL.Vec(IDL.Text)),
+          IDL.Opt(IDL.Vec(IDL.Nat)),
+        ],
         [Experience],
         [],
       ),
@@ -903,13 +1236,19 @@ export const idlFactory = ({ IDL }) => {
           IDL.Text,
           IDL.Opt(IDL.Text),
           IDL.Opt(IDL.Text),
+          IDL.Opt(ExperienceId),
         ],
         [IDL.Variant({ 'ok' : Reservation, 'err' : IDL.Text })],
         [],
       ),
     'createTable' : IDL.Func(
-        [IDL.Text, IDL.Nat, IDL.Int, IDL.Int],
+        [IDL.Text, IDL.Nat, IDL.Int, IDL.Int, IDL.Opt(IDL.Text)],
         [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+        [],
+      ),
+    'createTableGroupDefinition' : IDL.Func(
+        [IDL.Text, IDL.Vec(IDL.Text), IDL.Text],
+        [IDL.Variant({ 'ok' : TableGroupDefinition, 'err' : IDL.Text })],
         [],
       ),
     'deleteSeasonalPeriod' : IDL.Func(
@@ -922,13 +1261,23 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
+    'deleteTableGroupDefinition' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'deleteZone' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
     'findBestTable' : IDL.Func(
-        [IDL.Nat, IDL.Vec(IDL.Text)],
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Vec(IDL.Text)],
         [IDL.Opt(Table)],
         ['query'],
       ),
     'findBestTableForReservation' : IDL.Func(
-        [IDL.Nat],
+        [IDL.Nat, IDL.Text, IDL.Text],
         [IDL.Opt(Table)],
         ['query'],
       ),
@@ -947,15 +1296,47 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Text)],
         ['query'],
       ),
-    'getAvailableSlots' : IDL.Func([IDL.Text], [IDL.Vec(TimeSlot)], ['query']),
+    'getAuditLog' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : IDL.Vec(AuditLogEntry), 'err' : IDL.Text })],
+        ['query'],
+      ),
+    'getAuditLogPaginated' : IDL.Func(
+        [IDL.Nat, IDL.Nat],
+        [
+          IDL.Variant({
+            'ok' : IDL.Record({
+              'total' : IDL.Nat,
+              'entries' : IDL.Vec(AuditLogEntry),
+            }),
+            'err' : IDL.Text,
+          }),
+        ],
+        ['query'],
+      ),
+    'getAvailableSlots' : IDL.Func(
+        [IDL.Text],
+        [AvailableSlotsResponse],
+        ['query'],
+      ),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getExtendedConfig' : IDL.Func([], [RestaurantExtendedConfig], ['query']),
+    'getEmailTemplates' : IDL.Func([], [IDL.Vec(EmailTemplate)], ['query']),
+    'getExtendedConfig' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : RestaurantExtendedConfig, 'err' : IDL.Text })],
+        ['query'],
+      ),
     'getFloorState' : IDL.Func([], [FloorState], ['query']),
     'getGuest' : IDL.Func([GuestId], [IDL.Opt(Guest)], ['query']),
     'getKPIs' : IDL.Func([], [KPIs], ['query']),
     'getReservation' : IDL.Func(
         [ReservationId],
         [IDL.Opt(Reservation)],
+        ['query'],
+      ),
+    'getReservationChanges' : IDL.Func(
+        [ReservationId],
+        [IDL.Variant({ 'ok' : IDL.Vec(ReservationChange), 'err' : IDL.Text })],
         ['query'],
       ),
     'getRestaurantConfig' : IDL.Func(
@@ -971,10 +1352,25 @@ export const idlFactory = ({ IDL }) => {
         ],
         ['query'],
       ),
+    'getReviewRequestSettings' : IDL.Func(
+        [],
+        [ReviewRequestSettings],
+        ['query'],
+      ),
     'getSeasonalPeriods' : IDL.Func([], [IDL.Vec(SeasonalPeriod)], ['query']),
     'getSuggestionAccuracyStats' : IDL.Func(
         [IDL.Nat],
         [SuggestionAccuracyStats],
+        ['query'],
+      ),
+    'getTableGroupDefinitions' : IDL.Func(
+        [],
+        [
+          IDL.Variant({
+            'ok' : IDL.Vec(TableGroupDefinition),
+            'err' : IDL.Text,
+          }),
+        ],
         ['query'],
       ),
     'getTables' : IDL.Func([], [IDL.Vec(Table)], ['query']),
@@ -984,6 +1380,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(WaitlistEntry)],
         ['query'],
       ),
+    'getZones' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : IDL.Vec(Zone), 'err' : IDL.Text })],
+        ['query'],
+      ),
     'groupTables' : IDL.Func(
         [IDL.Vec(IDL.Text), IDL.Text],
         [IDL.Variant({ 'ok' : IDL.Vec(Table), 'err' : IDL.Text })],
@@ -991,16 +1392,37 @@ export const idlFactory = ({ IDL }) => {
       ),
     'hasOwner' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'listActiveExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
+    'listActiveExperiences' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Opt(IDL.Nat)],
+        [IDL.Vec(Experience)],
+        ['query'],
+      ),
     'listExperiences' : IDL.Func([], [IDL.Vec(Experience)], ['query']),
     'listGuests' : IDL.Func([], [IDL.Vec(Guest)], ['query']),
     'listReservations' : IDL.Func(
         [ReservationFilter],
-        [IDL.Vec(Reservation)],
+        [IDL.Variant({ 'ok' : IDL.Vec(Reservation), 'err' : IDL.Text })],
         ['query'],
       ),
     'listTeamMembers' : IDL.Func([], [IDL.Vec(TeamMember)], ['query']),
+    'logAuditEntry' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Opt(IDL.Text),
+          IDL.Opt(IDL.Text),
+        ],
+        [],
+        ['oneway'],
+      ),
     'offerWaitlistSpot' : IDL.Func([WaitlistId], [], []),
+    'recordReviewRequestSent' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
     'recordSuggestionFeedback' : IDL.Func(
         [IDL.Text, IDL.Bool, IDL.Opt(IDL.Text)],
         [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
@@ -1021,18 +1443,43 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
         [],
       ),
+    'resetEmailTemplate' : IDL.Func(
+        [EmailTemplateType],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'saveEmailTemplate' : IDL.Func(
+        [EmailTemplate],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'saveEmailTemplates' : IDL.Func(
+        [IDL.Vec(EmailTemplate)],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'saveReviewRequestSettings' : IDL.Func(
+        [IDL.Bool, ReviewRequestDelay, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
     'saveSeasonalPeriod' : IDL.Func(
         [SeasonalPeriod],
         [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
-    'searchGuests' : IDL.Func([IDL.Text], [IDL.Vec(Guest)], ['query']),
+    'searchGuests' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Nat],
+        [IDL.Record({ 'total' : IDL.Nat, 'guests' : IDL.Vec(Guest) })],
+        ['query'],
+      ),
     'setOwner' : IDL.Func([IDL.Principal], [], []),
     'setTableStatus' : IDL.Func(
         [TableId, TableStatus],
         [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
         [],
       ),
+    'shouldSendReviewRequest' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'suggestTable' : IDL.Func(
         [
           IDL.Nat,
@@ -1042,6 +1489,11 @@ export const idlFactory = ({ IDL }) => {
           IDL.Vec(ReservationSummary),
         ],
         [IDL.Variant({ 'ok' : AISeatingSuggestion, 'err' : IDL.Text })],
+        [],
+      ),
+    'syncTablesFromSettings' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : IDL.Nat, 'err' : IDL.Text })],
         [],
       ),
     'toggleSeasonalPeriod' : IDL.Func(
@@ -1102,7 +1554,17 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'updateReservation' : IDL.Func(
-        [ReservationId, IDL.Text, IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
+        [
+          ReservationId,
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Opt(IDL.Text),
+          IDL.Opt(ReservationStatus),
+          IDL.Opt(ExperienceId),
+          IDL.Opt(IDL.Text),
+          IDL.Opt(IDL.Text),
+        ],
         [IDL.Variant({ 'ok' : Reservation, 'err' : IDL.Text })],
         [],
       ),
@@ -1126,8 +1588,23 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
+    'updateTableCapacity' : IDL.Func(
+        [TableId, IDL.Nat],
+        [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateTableGroupDefinition' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Vec(IDL.Text), IDL.Text],
+        [IDL.Variant({ 'ok' : TableGroupDefinition, 'err' : IDL.Text })],
+        [],
+      ),
     'updateTablePosition' : IDL.Func(
         [TableId, IDL.Int, IDL.Int],
+        [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateTableZone' : IDL.Func(
+        [TableId, IDL.Opt(IDL.Text)],
         [IDL.Variant({ 'ok' : Table, 'err' : IDL.Text })],
         [],
       ),
@@ -1139,6 +1616,16 @@ export const idlFactory = ({ IDL }) => {
     'updateWaitlistEntry' : IDL.Func(
         [WaitlistId, IDL.Nat, IDL.Opt(IDL.Text)],
         [IDL.Variant({ 'ok' : WaitlistEntry, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateZone' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : Zone, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateZoneBoundaries' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
         [],
       ),
   });

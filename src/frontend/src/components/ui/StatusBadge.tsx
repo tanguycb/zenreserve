@@ -2,7 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ReservationStatus } from "@/types";
 
-type StatusVariant = ReservationStatus | "waiting" | "notified" | "expired";
+type StatusVariant =
+  | ReservationStatus
+  | "waiting"
+  | "offered"
+  | "expired"
+  | "removed_by_staff";
 
 const STATUS_CONFIG: Record<
   StatusVariant,
@@ -59,13 +64,17 @@ const STATUS_CONFIG: Record<
     label: "Wacht",
     className: "bg-accent/10 text-accent border-accent/20 hover:bg-accent/15",
   },
-  notified: {
+  offered: {
     label: "Genotificeerd",
     className:
       "bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/15",
   },
   expired: {
     label: "Verlopen",
+    className: "bg-muted text-muted-foreground border-border hover:bg-muted",
+  },
+  removed_by_staff: {
+    label: "Verwijderd",
     className: "bg-muted text-muted-foreground border-border hover:bg-muted",
   },
 };

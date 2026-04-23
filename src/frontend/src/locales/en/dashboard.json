@@ -9,7 +9,37 @@
     "noShows": "No-shows",
     "kpiSection": "Performance indicators",
     "revenueToday": "Revenue today",
-    "today": "Today"
+    "today": "Today",
+    "occupancyWidget": "Today's occupancy",
+    "barometerSubtitle": "Crowd barometer",
+    "barometerLow": "Quiet",
+    "barometerMedium": "Busy",
+    "barometerHigh": "Full",
+    "barometerSeats": "seats",
+    "couvertsToday": "Covers today",
+    "waitlistCount": "Waitlist today",
+    "cancellationRate": "Cancellation rate",
+    "newReservation": "New reservation",
+    "newReservationOption": "Reservation",
+    "newReservationOptionHint": "Invite a guest",
+    "walkInOption": "Walk-In",
+    "walkInOptionHint": "No reservation needed",
+    "couvertsPerService": "Covers per service today",
+    "noCouverts": "No covers today",
+    "covers": "cov.",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Dinner",
+    "aiInsightLabel": "AI Insight"
+  },
+  "walkIn": {
+    "title": "Walk-In",
+    "activeService": "Current service",
+    "description": "Select the service and go directly to the floor plan to mark an available table as occupied. No guest data needed.",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Dinner",
+    "now": "Now active",
+    "cancel": "Cancel",
+    "confirm": "Go to floor plan"
   },
   "reservations": {
     "title": "Reservations",
@@ -39,7 +69,17 @@
       "partyShort": "No. of people",
       "experience": "Experience",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "table": "Table"
+    },
+    "reservation": {
+      "table": "Table",
+      "noTable": "No table assigned",
+      "assignTable": "Assign table",
+      "changeTable": "Change table",
+      "unlinkTable": "Unlink",
+      "tableAssigned": "Table assigned",
+      "selectTable": "Select a table"
     },
     "actions": {
       "view": "View reservation of {{name}}",
@@ -51,7 +91,21 @@
       "title": "Floor plan overview",
       "filter_message": "Reservations filtered by Table {{table}} — click again to clear"
     },
-    "statusError": "Failed to update status. Please try again."
+    "statusError": "Failed to update status. Please try again.",
+    "edit": "Edit",
+    "saveChanges": "Save changes",
+    "cancelEdit": "Cancel",
+    "changeHistory": "Change history",
+    "noChanges": "No changes yet",
+    "changedBy": "Changed by",
+    "fields": {
+      "date": "Date",
+      "time": "Time",
+      "partySize": "Party size",
+      "notes": "Notes",
+      "status": "Status",
+      "experience": "Experience"
+    }
   },
   "newReservation": {
     "title": "New reservation",
@@ -70,6 +124,9 @@
     "table": "Table",
     "autoAssign": "Auto-assign",
     "autoAssignHint": "Choose 'Auto-assign' for smart table selection based on party size",
+    "experience": "Experience (optional)",
+    "noExperience": "No experience",
+    "experienceOnlyDuring": "only during {{services}}",
     "paymentStatus": "Payment status",
     "paymentNone": "No payment",
     "paymentPending": "Pending",
@@ -138,7 +195,22 @@
     "tagEvent": "Event",
     "tagSpecial": "Special",
     "empty": "No experiences created",
-    "emptyHint": "Add your first menu, event, or special to offer guests extra options when booking"
+    "emptyHint": "Add your first menu, event, or special to offer guests extra options when booking",
+    "requiredToggle": "Required for guests",
+    "requiredHint": "Guest must choose an experience",
+    "optionalHint": "Guest can skip the experience",
+    "markedRequired": "\"{{name}}\" marked as required",
+    "markedOptional": "\"{{name}}\" marked as optional",
+    "deleteTitle": "Delete experience",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "servicesLabel": "Applicable to service",
+    "servicesHint": "Select nothing = applies to all services",
+    "allServices": "All services",
+    "serviceLunch": "Lunch",
+    "serviceDiner": "Dinner",
+    "daysLabel": "Applicable to days",
+    "daysHint": "Select nothing = applies to all days",
+    "allDays": "All days"
   },
   "waitlist": {
     "title": "Waitlist",
@@ -256,7 +328,13 @@
     "tableAriaLabel": "{{name}}, {{status}}, {{capacity}} seats",
     "canvasAriaLabel": "Interactive seating plan",
     "decreaseCapacity": "Decrease capacity",
-    "increaseCapacity": "Increase capacity"
+    "increaseCapacity": "Increase capacity",
+    "noTablesYet": "No tables on the floor plan yet",
+    "noTablesYetHint": "Go to Settings > Capacity to configure tables, or add them manually here.",
+    "importFromSettings": "Import tables from settings",
+    "syncing": "Importing…",
+    "syncSuccess": "Tables have been successfully added to the floor plan.",
+    "syncNotAvailable": "Sync is not yet available. Add tables manually."
   },
   "aiSuggestion": {
     "buttonLabel": "AI Suggestion",
@@ -400,6 +478,7 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Settings saved",
+    "savedWithSync": "Settings saved. Tables have been automatically added to the floor plan.",
     "saveError": "Save failed. Please try again.",
     "unsavedChanges": "You have unsaved changes",
     "comingSoon": "Coming soon",
@@ -415,7 +494,53 @@
       "notifications": "Notifications & messages",
       "integrations": "Integrations",
       "team": "Team & permissions",
-      "seasonal": "Seasonal settings"
+      "seasonal": "Seasonal settings",
+      "zones": "Zones",
+      "experiences": "Experiences",
+      "seatingPlan": "Floor plan"
+    },
+    "seatingSettings": {
+      "title": "Floor plan configuration",
+      "subtitle": "Manage tables, zones and layout of your floor plan. {{count}} tables configured."
+    },
+    "walkin": {
+      "banner": "Walk-in mode — click a table to mark it as occupied",
+      "dismiss": "Dismiss",
+      "subtitle": "Walk-in mode — click a table",
+      "clickHint": "Click a table to mark it as occupied for walk-in guests",
+      "alreadyOccupied": "{{name}} is already occupied",
+      "markedOccupied": "{{name}} is now marked as occupied",
+      "markError": "Could not update table status"
+    },
+    "viewOnly": {
+      "subtitle": "{{count}} tables · select date and service",
+      "noTablesHint": "Go to Settings → Floor plan to add and arrange tables."
+    },
+    "today": "Today",
+    "datePrev": "Previous day",
+    "dateNext": "Next day",
+    "goToToday": "Go to today",
+    "zones": {
+      "subtitle": "Define the areas of your restaurant used across the floor plan, availability and analytics",
+      "listTitle": "Configured zones",
+      "listHint": "Each zone has a color, name and maximum guest count",
+      "addTitle": "Add new zone",
+      "addZone": "Add zone",
+      "name": "Name",
+      "namePlaceholder": "E.g. Terrace, Bar, Private room…",
+      "maxGuests": "Max guests",
+      "maxGuestsLabel": "{{count}} guests max.",
+      "color": "Color",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete?",
+      "cancel": "Cancel",
+      "emptyTitle": "No zones configured yet",
+      "emptyHint": "Add your first zone to get started. Zones are used in the floor plan, widget and analytics.",
+      "added": "Zone added",
+      "updated": "Zone updated",
+      "deleted": "Zone deleted",
+      "infoNote": "Zones are linked to the floor plan and the reservation widget. Deleting a zone also removes it from all tables and filters."
     },
     "days": {
       "mon": "Mon",
@@ -489,6 +614,23 @@
       "occupancyCeilingHint": "Limit bookings to allow walk-ins",
       "occupancyCeilingLabel": "Never exceed {{value}}% occupancy to allow walk-ins"
     },
+    "tableGroups": {
+      "title": "Table Groups",
+      "description": "Define which tables can be combined for larger parties",
+      "addGroup": "Add group",
+      "groupName": "Group name",
+      "groupNamePlaceholder": "E.g. Terrace combo",
+      "selectTables": "Select tables",
+      "totalCapacity": "Total capacity",
+      "noGroups": "No table groups defined yet",
+      "noTablesHint": "Add table types above first",
+      "descriptionOptional": "Description (optional)",
+      "descriptionPlaceholder": "E.g. Large room for events",
+      "deleteConfirm": "Delete group?",
+      "cancel": "Cancel",
+      "saved": "Table group saved",
+      "deleted": "Table group deleted"
+    },
     "reservationRules": {
       "subtitle": "Manage booking window, cancellation policy, deposit and maximum stay",
       "advanceBookingTitle": "Booking window",
@@ -533,6 +675,8 @@
       "requireAllergiesHint": "Guest must mention any allergies",
       "requireDietPreferences": "Dietary preferences required",
       "requireDietHint": "Guest must specify dietary preferences",
+      "showBabiesChildren": "Show babies/children field in widget",
+      "showBabiesChildrenHint": "Displays the option for babies and children (< 3 years) in the booking widget",
       "specialRequestsTitle": "Standard special requests",
       "specialRequestsSubtitle": "Enable the options guests can tick when making a reservation",
       "specialRequest": {
@@ -756,7 +900,7 @@
       "addMember": "Invite team member",
       "invite": "Invite",
       "invited": "{{name}} invited",
-      "inviteError": "Invite failed. Please try again.",
+      "inviteError": "Could not add team member — check your connection and try again.",
       "inviteNote": "The team member will need to log in with Internet Identity and select the assigned role.",
       "confirmRemove": "Are you sure you want to remove {{name}} from the team?",
       "removed": "{{name}} removed",
@@ -781,7 +925,10 @@
         "name": "Name",
         "namePlaceholder": "Sophie Janssen",
         "email": "Email",
-        "role": "Assign role"
+        "role": "Assign role",
+        "principalId": "Internet Identity principal ID",
+        "principalIdPlaceholder": "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxx",
+        "principalIdHint": "The principal ID is the unique identifier of the team member's Internet Identity. They can find it by logging in at identity.ic0.app."
       }
     },
     "seasonal": {
@@ -835,8 +982,26 @@
       "infoNote": "Seasonal settings determine which zones are available and how many guests can be booked per period. Combine with opening hours for maximum control."
     }
   },
+  "auditLog": {
+    "title": "Audit Log",
+    "subtitle": "Overview of all settings changes made by administrators",
+    "columns": {
+      "timestamp": "Timestamp",
+      "who": "Who",
+      "page": "Page",
+      "action": "Action",
+      "summary": "Summary"
+    },
+    "emptyTitle": "No changes recorded yet",
+    "emptyHint": "Changes will appear here once settings are modified",
+    "paginationInfo": "{{from}}–{{to}} of {{total}} entries",
+    "prev": "Previous",
+    "next": "Next",
+    "forbidden": "Access denied",
+    "forbiddenHint": "Only owners and managers can view the audit log",
+    "backToDashboard": "Back to dashboard"
+  },
   "analytics": {
-    "title": "Analytics",
     "subtitle": "Occupancy trends, peak hours and reservation patterns",
     "sectionOverview": "Overview",
     "sectionOccupancy": "Occupancy per zone",
@@ -872,13 +1037,20 @@
     "prevWeek": "Previous week",
     "nextWeek": "Next week",
     "currentWeek": "Go to current week",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "currentMonth": "Go to current month",
     "dayNames": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "dayNamesShort": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
     "reservationCount": "{{count}} reservation",
     "reservationCountPlural": "{{count}} reservations",
     "cardLabel": "{{name}} at {{time}}, {{count}} persons",
     "legendConfirmed": "Confirmed",
     "legendWaitlist": "Waitlist",
     "legendExperience": "Experience",
-    "legendCancelled": "Cancelled"
+    "legendCancelled": "Cancelled",
+    "legendAvailable": "< 50% full",
+    "legendBusy": "50–80% full",
+    "legendFull": "> 80% full"
   }
 }

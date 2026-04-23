@@ -20,6 +20,22 @@ export interface AISeatingSuggestion {
   'confidence' : number,
   'suggestedTableIds' : Array<string>,
 }
+export interface AuditLogEntry {
+  'id' : string,
+  'action' : string,
+  'oldValue' : [] | [string],
+  'callerName' : string,
+  'callerRole' : string,
+  'page' : string,
+  'newValue' : [] | [string],
+  'summary' : string,
+  'timestamp' : bigint,
+  'callerPrincipal' : string,
+}
+export interface AvailableSlotsResponse {
+  'fixedClosingDays' : Array<bigint>,
+  'slots' : Array<TimeSlot>,
+}
 export interface BrandingSettings {
   'confirmationText' : string,
   'primaryColor' : string,
@@ -42,13 +58,28 @@ export interface CustomQuestion {
   'options' : Array<string>,
 }
 export type DayOfWeek = bigint;
+export interface EmailTemplate {
+  'id' : string,
+  'backgroundColor' : string,
+  'subject' : string,
+  'heading' : string,
+  'templateType' : EmailTemplateType,
+  'accentColor' : string,
+  'logoUrl' : string,
+  'bodyHtml' : string,
+  'footer' : string,
+}
+export type EmailTemplateType = string;
 export interface Experience {
   'id' : ExperienceId,
   'maxCapacity' : bigint,
+  'dayOfWeek' : [] | [Array<bigint>],
   'name' : string,
   'pricePerPerson' : bigint,
   'description' : string,
   'isActive' : boolean,
+  'serviceIds' : [] | [Array<string>],
+  'required' : boolean,
 }
 export type ExperienceId = string;
 export interface FloorState { 'tables' : Array<Table>, 'updatedAt' : Timestamp }
@@ -65,6 +96,7 @@ export interface GuestFormSettings {
   'requireAllergies' : boolean,
   'requireDietPreferences' : boolean,
   'requirePhone' : boolean,
+  'showBabiesChildren' : boolean,
   'customQuestions' : Array<CustomQuestion>,
 }
 export type GuestId = string;
@@ -80,6 +112,7 @@ export interface KPIs {
   'avgPartySize' : bigint,
   'occupancyPct' : bigint,
   'todayCoversPerService' : Array<[string, bigint]>,
+  'waitlistCount' : bigint,
   'todayReservationCount' : bigint,
   'noShowCount' : bigint,
 }
@@ -103,13 +136,29 @@ export interface Reservation {
   'specialRequests' : [] | [string],
   'createdAt' : Timestamp,
   'time' : string,
+  'zone' : [] | [string],
+  'tableId' : [] | [string],
+  'updatedAt' : Timestamp,
+  'notes' : [] | [string],
   'stripePaymentIntentId' : [] | [string],
   'partySize' : bigint,
+  'changes' : Array<ReservationChange>,
   'guestId' : GuestId,
+}
+export interface ReservationChange {
+  'id' : string,
+  'field' : string,
+  'changedByName' : string,
+  'changedByRole' : string,
+  'oldValue' : string,
+  'changedBy' : string,
+  'newValue' : string,
+  'timestamp' : bigint,
 }
 export interface ReservationFilter {
   'status' : [] | [ReservationStatus],
   'date' : [] | [string],
+  'time' : [] | [string],
   'guestId' : [] | [GuestId],
 }
 export type ReservationId = string;
@@ -149,6 +198,7 @@ export interface RestaurantExtendedConfig {
   'zones' : Array<ZoneCapacity>,
   'tableTypes' : Array<TableType>,
   'reservationRules' : ReservationRules,
+  'zoneDefs' : Array<Zone>,
   'currency' : string,
   'restaurantName' : string,
   'closingHour' : bigint,
@@ -160,6 +210,14 @@ export interface RestaurantExtendedConfig {
   'totalSeatsPerSlot' : bigint,
   'slotIntervalMinutes' : bigint,
   'contactPhone' : string,
+}
+export type ReviewRequestDelay = { 'hour1' : null } |
+  { 'hour2' : null } |
+  { 'hour24' : null };
+export interface ReviewRequestSettings {
+  'enabled' : boolean,
+  'message' : string,
+  'delay' : ReviewRequestDelay,
 }
 export interface SeasonalPeriod {
   'id' : string,
@@ -192,6 +250,7 @@ export interface Table {
   'id' : TableId,
   'status' : TableStatus,
   'name' : string,
+  'zone' : [] | [string],
   'seatCount' : [] | [bigint],
   'guestName' : [] | [string],
   'groupId' : [] | [string],
@@ -204,6 +263,13 @@ export interface TableAssignment {
   'tableId' : TableId,
   'guestName' : string,
   'reservationId' : ReservationId,
+}
+export interface TableGroupDefinition {
+  'id' : string,
+  'name' : string,
+  'tableIds' : Array<string>,
+  'description' : string,
+  'totalCapacity' : bigint,
 }
 export type TableId = string;
 export type TableStatus = { 'occupied' : null } |
@@ -249,9 +315,17 @@ export interface WaitlistEntry {
 }
 export type WaitlistId = string;
 export type WaitlistStatus = { 'expired' : null } |
+  { 'removed_by_staff' : null } |
   { 'confirmed' : null } |
   { 'offered' : null } |
   { 'waiting' : null };
+export interface Zone {
+  'id' : string,
+  'boundaries' : [] | [string],
+  'name' : string,
+  'color' : string,
+  'maxGuests' : bigint,
+}
 export interface ZoneCapacity { 'zoneName' : string, 'maxGuests' : bigint }
 export interface _SERVICE {
   '_initializeAccessControl' : ActorMethod<[], undefined>,
@@ -262,7 +336,18 @@ export interface _SERVICE {
   >,
   'addToWaitlist' : ActorMethod<
     [GuestId, string, bigint, [] | [string], [] | [string]],
-    WaitlistEntry
+    { 'ok' : WaitlistEntry } |
+      { 'err' : string }
+  >,
+  'addZone' : ActorMethod<
+    [string, string, bigint],
+    { 'ok' : Zone } |
+      { 'err' : string }
+  >,
+  'applyHouseStyleToAll' : ActorMethod<
+    [string, string, string],
+    { 'ok' : null } |
+      { 'err' : string }
   >,
   'askAI' : ActorMethod<
     [string, string],
@@ -281,13 +366,21 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'autoAssignTable' : ActorMethod<
-    [ReservationId, bigint],
+    [ReservationId, bigint, string, string],
     { 'ok' : Table } |
       { 'err' : string }
   >,
   'cancelReservation' : ActorMethod<[ReservationId], undefined>,
   'createExperience' : ActorMethod<
-    [string, string, bigint, bigint],
+    [
+      string,
+      string,
+      bigint,
+      bigint,
+      boolean,
+      [] | [Array<string>],
+      [] | [Array<bigint>],
+    ],
     Experience
   >,
   'createGuest' : ActorMethod<[string, string, [] | [string]], Guest>,
@@ -313,13 +406,19 @@ export interface _SERVICE {
       string,
       [] | [string],
       [] | [string],
+      [] | [ExperienceId],
     ],
     { 'ok' : Reservation } |
       { 'err' : string }
   >,
   'createTable' : ActorMethod<
-    [string, bigint, bigint, bigint],
+    [string, bigint, bigint, bigint, [] | [string]],
     { 'ok' : Table } |
+      { 'err' : string }
+  >,
+  'createTableGroupDefinition' : ActorMethod<
+    [string, Array<string>, string],
+    { 'ok' : TableGroupDefinition } |
       { 'err' : string }
   >,
   'deleteSeasonalPeriod' : ActorMethod<
@@ -328,8 +427,20 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'deleteTable' : ActorMethod<[TableId], { 'ok' : null } | { 'err' : string }>,
-  'findBestTable' : ActorMethod<[bigint, Array<string>], [] | [Table]>,
-  'findBestTableForReservation' : ActorMethod<[bigint], [] | [Table]>,
+  'deleteTableGroupDefinition' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'deleteZone' : ActorMethod<[string], { 'ok' : boolean } | { 'err' : string }>,
+  'findBestTable' : ActorMethod<
+    [bigint, string, string, Array<string>],
+    [] | [Table]
+  >,
+  'findBestTableForReservation' : ActorMethod<
+    [bigint, string, string],
+    [] | [Table]
+  >,
   'getAISuggestions' : ActorMethod<
     [[] | [GuestId], string],
     { 'ok' : Array<string> } |
@@ -337,13 +448,33 @@ export interface _SERVICE {
   >,
   'getActiveSeason' : ActorMethod<[string], [] | [SeasonalPeriod]>,
   'getActiveZonesForDate' : ActorMethod<[string], Array<string>>,
-  'getAvailableSlots' : ActorMethod<[string], Array<TimeSlot>>,
+  'getAuditLog' : ActorMethod<
+    [],
+    { 'ok' : Array<AuditLogEntry> } |
+      { 'err' : string }
+  >,
+  'getAuditLogPaginated' : ActorMethod<
+    [bigint, bigint],
+    { 'ok' : { 'total' : bigint, 'entries' : Array<AuditLogEntry> } } |
+      { 'err' : string }
+  >,
+  'getAvailableSlots' : ActorMethod<[string], AvailableSlotsResponse>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getExtendedConfig' : ActorMethod<[], RestaurantExtendedConfig>,
+  'getEmailTemplates' : ActorMethod<[], Array<EmailTemplate>>,
+  'getExtendedConfig' : ActorMethod<
+    [],
+    { 'ok' : RestaurantExtendedConfig } |
+      { 'err' : string }
+  >,
   'getFloorState' : ActorMethod<[], FloorState>,
   'getGuest' : ActorMethod<[GuestId], [] | [Guest]>,
   'getKPIs' : ActorMethod<[], KPIs>,
   'getReservation' : ActorMethod<[ReservationId], [] | [Reservation]>,
+  'getReservationChanges' : ActorMethod<
+    [ReservationId],
+    { 'ok' : Array<ReservationChange> } |
+      { 'err' : string }
+  >,
   'getRestaurantConfig' : ActorMethod<
     [],
     {
@@ -354,11 +485,18 @@ export interface _SERVICE {
       'slotIntervalMinutes' : bigint,
     }
   >,
+  'getReviewRequestSettings' : ActorMethod<[], ReviewRequestSettings>,
   'getSeasonalPeriods' : ActorMethod<[], Array<SeasonalPeriod>>,
   'getSuggestionAccuracyStats' : ActorMethod<[bigint], SuggestionAccuracyStats>,
+  'getTableGroupDefinitions' : ActorMethod<
+    [],
+    { 'ok' : Array<TableGroupDefinition> } |
+      { 'err' : string }
+  >,
   'getTables' : ActorMethod<[], Array<Table>>,
   'getWaitlist' : ActorMethod<[string], Array<WaitlistEntry>>,
   'getWaitlistEntry' : ActorMethod<[WaitlistId], [] | [WaitlistEntry]>,
+  'getZones' : ActorMethod<[], { 'ok' : Array<Zone> } | { 'err' : string }>,
   'groupTables' : ActorMethod<
     [Array<string>, string],
     { 'ok' : Array<Table> } |
@@ -366,12 +504,28 @@ export interface _SERVICE {
   >,
   'hasOwner' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'listActiveExperiences' : ActorMethod<[], Array<Experience>>,
+  'listActiveExperiences' : ActorMethod<
+    [[] | [string], [] | [bigint]],
+    Array<Experience>
+  >,
   'listExperiences' : ActorMethod<[], Array<Experience>>,
   'listGuests' : ActorMethod<[], Array<Guest>>,
-  'listReservations' : ActorMethod<[ReservationFilter], Array<Reservation>>,
+  'listReservations' : ActorMethod<
+    [ReservationFilter],
+    { 'ok' : Array<Reservation> } |
+      { 'err' : string }
+  >,
   'listTeamMembers' : ActorMethod<[], Array<TeamMember>>,
+  'logAuditEntry' : ActorMethod<
+    [string, string, string, string, [] | [string], [] | [string]],
+    undefined
+  >,
   'offerWaitlistSpot' : ActorMethod<[WaitlistId], undefined>,
+  'recordReviewRequestSent' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
   'recordSuggestionFeedback' : ActorMethod<
     [string, boolean, [] | [string]],
     { 'ok' : null } |
@@ -392,21 +546,50 @@ export interface _SERVICE {
     { 'ok' : WaitlistEntry } |
       { 'err' : string }
   >,
+  'resetEmailTemplate' : ActorMethod<
+    [EmailTemplateType],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'saveEmailTemplate' : ActorMethod<
+    [EmailTemplate],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'saveEmailTemplates' : ActorMethod<
+    [Array<EmailTemplate>],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'saveReviewRequestSettings' : ActorMethod<
+    [boolean, ReviewRequestDelay, string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
   'saveSeasonalPeriod' : ActorMethod<
     [SeasonalPeriod],
     { 'ok' : null } |
       { 'err' : string }
   >,
-  'searchGuests' : ActorMethod<[string], Array<Guest>>,
+  'searchGuests' : ActorMethod<
+    [string, bigint, bigint],
+    { 'total' : bigint, 'guests' : Array<Guest> }
+  >,
   'setOwner' : ActorMethod<[Principal], undefined>,
   'setTableStatus' : ActorMethod<
     [TableId, TableStatus],
     { 'ok' : Table } |
       { 'err' : string }
   >,
+  'shouldSendReviewRequest' : ActorMethod<[string], boolean>,
   'suggestTable' : ActorMethod<
     [bigint, [] | [string], string, string, Array<ReservationSummary>],
     { 'ok' : AISeatingSuggestion } |
+      { 'err' : string }
+  >,
+  'syncTablesFromSettings' : ActorMethod<
+    [],
+    { 'ok' : bigint } |
       { 'err' : string }
   >,
   'toggleSeasonalPeriod' : ActorMethod<
@@ -462,7 +645,17 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'updateReservation' : ActorMethod<
-    [ReservationId, string, string, bigint, [] | [string]],
+    [
+      ReservationId,
+      string,
+      string,
+      bigint,
+      [] | [string],
+      [] | [ReservationStatus],
+      [] | [ExperienceId],
+      [] | [string],
+      [] | [string],
+    ],
     { 'ok' : Reservation } |
       { 'err' : string }
   >,
@@ -484,8 +677,23 @@ export interface _SERVICE {
     { 'ok' : null } |
       { 'err' : string }
   >,
+  'updateTableCapacity' : ActorMethod<
+    [TableId, bigint],
+    { 'ok' : Table } |
+      { 'err' : string }
+  >,
+  'updateTableGroupDefinition' : ActorMethod<
+    [string, string, Array<string>, string],
+    { 'ok' : TableGroupDefinition } |
+      { 'err' : string }
+  >,
   'updateTablePosition' : ActorMethod<
     [TableId, bigint, bigint],
+    { 'ok' : Table } |
+      { 'err' : string }
+  >,
+  'updateTableZone' : ActorMethod<
+    [TableId, [] | [string]],
     { 'ok' : Table } |
       { 'err' : string }
   >,
@@ -497,6 +705,16 @@ export interface _SERVICE {
   'updateWaitlistEntry' : ActorMethod<
     [WaitlistId, bigint, [] | [string]],
     { 'ok' : WaitlistEntry } |
+      { 'err' : string }
+  >,
+  'updateZone' : ActorMethod<
+    [string, string, string, bigint],
+    { 'ok' : Zone } |
+      { 'err' : string }
+  >,
+  'updateZoneBoundaries' : ActorMethod<
+    [string, string],
+    { 'ok' : boolean } |
       { 'err' : string }
   >,
 }

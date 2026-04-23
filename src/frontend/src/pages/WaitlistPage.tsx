@@ -68,7 +68,7 @@ export default function WaitlistPage() {
   const filtered = allEntries;
 
   const waitingCount = filtered.filter((e) => e.status === "waiting").length;
-  const offeredCount = filtered.filter((e) => e.status === "notified").length;
+  const offeredCount = filtered.filter((e) => e.status === "offered").length;
   const confirmedCount = filtered.filter(
     (e) => e.status === "confirmed",
   ).length;
@@ -79,24 +79,24 @@ export default function WaitlistPage() {
       label: t("waitlist.totalWaiting"),
       value: waitingCount,
       icon: Clock,
-      cls: "text-amber-400",
-      bg: "bg-amber-500/10",
+      cls: "text-[oklch(var(--status-orange))]",
+      bg: "bg-[oklch(var(--status-orange)/0.1)]",
     },
     {
       key: "offered",
       label: t("waitlist.totalOffered"),
       value: offeredCount,
       icon: Bell,
-      cls: "text-blue-400",
-      bg: "bg-blue-500/10",
+      cls: "text-[oklch(var(--status-blue))]",
+      bg: "bg-[oklch(var(--status-blue)/0.1)]",
     },
     {
       key: "confirmed",
       label: t("waitlist.totalConfirmed"),
       value: confirmedCount,
       icon: CheckCircle2,
-      cls: "text-emerald-400",
-      bg: "bg-emerald-500/10",
+      cls: "text-primary",
+      bg: "bg-primary/10",
     },
   ];
 
@@ -258,14 +258,14 @@ export default function WaitlistPage() {
       {filtered.length > 0 && (
         <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
           {waitingCount > 0 && (
-            <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 gap-1.5 px-2.5 py-1">
+            <Badge className="bg-[oklch(var(--status-orange)/0.1)] text-[oklch(var(--status-orange))] border border-[oklch(var(--status-orange)/0.2)] gap-1.5 px-2.5 py-1">
               <Users className="h-3 w-3" />
               {t("waitlist.waitingCountPlural", { count: waitingCount })}
             </Badge>
           )}
           {offeredCount > 0 && (
             <Badge
-              className="bg-blue-500/10 text-blue-400 border border-blue-500/20 gap-1.5 px-2.5 py-1"
+              className="bg-[oklch(var(--status-blue)/0.1)] text-[oklch(var(--status-blue))] border border-[oklch(var(--status-blue)/0.2)] gap-1.5 px-2.5 py-1"
               data-ocid="waitlist-count"
             >
               <Bell className="h-3 w-3" />
@@ -273,7 +273,7 @@ export default function WaitlistPage() {
             </Badge>
           )}
           {confirmedCount > 0 && (
-            <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 gap-1.5 px-2.5 py-1">
+            <Badge className="bg-primary/10 text-primary border border-primary/20 gap-1.5 px-2.5 py-1">
               <CheckCircle2 className="h-3 w-3" />
               {t("waitlist.confirmedCount", { count: confirmedCount })}
             </Badge>

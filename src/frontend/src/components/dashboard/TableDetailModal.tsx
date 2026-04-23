@@ -153,13 +153,16 @@ export function TableDetailModal({
     }
   }, [isOpen]);
 
-  // Desktop dialog
+  // Desktop dialog — guard showModal/close to avoid "Cannot call showModal() on an open non-modal dialog"
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || isMobile) return;
-    if (isOpen) dialog.showModal?.();
-    else {
-      dialog.close?.();
+    if (isOpen) {
+      // Only call showModal() if the dialog is not already open
+      if (!dialog.open) dialog.showModal();
+    } else {
+      // Only call close() if the dialog is currently open
+      if (dialog.open) dialog.close();
       setConfirmDelete(false);
       setSelectedReservation("");
     }
@@ -655,7 +658,6 @@ export function TableDetailModal({
 
       <dialog
         ref={dialogRef}
-        open={isOpen}
         className={cn(
           "relative z-50 w-full max-w-md rounded-2xl border border-border",
           "bg-gradient-to-br from-card to-background shadow-elevated",
